@@ -1,6 +1,6 @@
 'use client'
-import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import React, { useState, useEffect, useCallback } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { InfoIcon } from 'lucide-react';
 
 import { calculateTotalInterestPaid, calculateBreakEvenYears } from '../utils';
@@ -40,6 +40,20 @@ const InfoTooltip = ({ content, footerLink }: { content: string; footerLink?: st
   );
 };
 
+function useDebounce(callback: () => void, delay: number) {
+  const timeoutRef = React.useRef<NodeJS.Timeout>();
+
+  return useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      callback();
+    }, delay);
+  }, [callback, delay]);
+}
+
 export default function CollegeCostCalculator() {
   const [tuition, setTuition] = useState(50000);
   const [loan, setLoan] = useState(40000);
@@ -54,24 +68,26 @@ export default function CollegeCostCalculator() {
   const [breakEvenYears, setBreakEvenYears] = useState<number | string>(0);
   const [showResults, setShowResults] = useState(false);
 
-  useEffect(() => {
-    if (showResults) {
-      calculateCosts();
-    }
-  }, [tuition, loan, interest, salaryWithoutCollege, salaryWithCollege]);
-
   const calculateCosts = () => {
     const interestCost = parseFloat(calculateTotalInterestPaid(loan, parseFloat(interest), 10));
     const opportunityCostValue = salaryWithoutCollege * (parseInt(schoolYears) || 0);
     const totalCostValue = tuition + interestCost + opportunityCostValue;
     const breakEven = calculateBreakEvenYears(totalCostValue, salaryWithCollege, salaryWithoutCollege);
+
     setLoanInterest(interestCost);
     setOpportunityCost(opportunityCostValue);
     setTotalCost(totalCostValue);
     setBreakEvenYears(breakEven);
     setShowResults(true);
   };
-  
+
+  const debouncedCalculate = useDebounce(calculateCosts, 500);
+
+  useEffect(() => {
+    if (showResults) {
+      debouncedCalculate();
+    }
+  }, [tuition, loan, interest, salaryWithoutCollege, salaryWithCollege, schoolYears]);
 
   const data = [
     { name: "Tuition", value: tuition },
@@ -129,6 +145,27 @@ export default function CollegeCostCalculator() {
       );
     }
     return null;
+  };
+
+  const calculateLifetimeEarnings = () => {
+    const nonCollegeYears = 45;
+    const collegeYears = 45 - parseInt(schoolYears);
+    
+    const nonCollegeEarnings = nonCollegeYears * salaryWithoutCollege;
+    const collegeEarnings = collegeYears * salaryWithCollege;
+
+    return [
+      {
+        name: "Without College",
+        earnings: nonCollegeEarnings,
+        years: nonCollegeYears
+      },
+      {
+        name: "With College",
+        earnings: collegeEarnings,
+        years: collegeYears
+      }
+    ];
   };
 
   return (
@@ -205,7 +242,9 @@ export default function CollegeCostCalculator() {
             onChange={(e) => handleCurrencyInput(e.target.value, setSalaryWithCollege)}
           />
         </div>
-        <Button onClick={calculateCosts}>Calculate</Button>
+        {!showResults && (
+          <Button onClick={calculateCosts}>Calculate</Button>
+        )}
       </CardContent>
       {showResults && (
         <CardFooter>
@@ -253,15 +292,42 @@ export default function CollegeCostCalculator() {
               </ResponsiveContainer>
             </div>
             <div className="grid gap-2">
-              <h2 className="text-xl font-semibold">
-                Break-Even Point
+              <h2 className="text-3xl font-semibold">
+                Break-Even Point {typeof breakEvenYears === 'number' ? `${breakEvenYears.toFixed(1)} years` : 'N/A'}
                 <InfoTooltip content="The number of years it will take for your additional earnings from a college degree to offset the total cost of college." />
               </h2>
               <p>
                 {typeof breakEvenYears === 'number'
                   ? `You will break even on your college investment in approximately ${breakEvenYears.toFixed(1)} years.`
-                  : breakEvenYears}
+                  : 'Unable to calculate break-even point.'}
               </p>
+            </div>
+            <div className="grid gap-4">
+              <h3 className="font-semibold">Lifetime Earnings Comparison +({formatCurrency(calculateLifetimeEarnings()[1].earnings - calculateLifetimeEarnings()[0].earnings)})
+                <InfoTooltip content="Comparison of total earnings over a 45-year career period. College path accounts for years spent in school." />
+              </h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={calculateLifetimeEarnings()}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis 
+                    tickFormatter={(value) => formatCurrency(value)}
+                    width={100}
+                  />
+                  <Tooltip
+                    formatter={(value: any) => formatCurrency(value)}
+                    labelFormatter={(label) => `${label} (${calculateLifetimeEarnings().find(item => item.name === label)?.years} years)`}
+                  />
+                  <Bar dataKey="earnings" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="text-sm text-muted-foreground">
+                <p>Without College: {formatCurrency(calculateLifetimeEarnings()[0].earnings)} (45 years)</p>
+                <p>With College: {formatCurrency(calculateLifetimeEarnings()[1].earnings)} ({45 - parseInt(schoolYears)} years)</p>
+              </div>
             </div>
           </div>
         </CardFooter>
