@@ -68,6 +68,10 @@ export default function CollegeCostCalculator() {
   const [breakEvenYears, setBreakEvenYears] = useState<number | string>(0);
   const [showResults, setShowResults] = useState(false);
 
+  const [debouncedSalaryWithoutCollege, setDebouncedSalaryWithoutCollege] = useState(35000);
+  const [debouncedSalaryWithCollege, setDebouncedSalaryWithCollege] = useState(55000);
+  const [debouncedSchoolYears, setDebouncedSchoolYears] = useState('4');
+
   const calculateCosts = () => {
     const interestCost = parseFloat(calculateTotalInterestPaid(loan, parseFloat(interest), 10));
     const opportunityCostValue = salaryWithoutCollege * (parseInt(schoolYears) || 0);
@@ -78,6 +82,9 @@ export default function CollegeCostCalculator() {
     setOpportunityCost(opportunityCostValue);
     setTotalCost(totalCostValue);
     setBreakEvenYears(breakEven);
+    setDebouncedSalaryWithoutCollege(salaryWithoutCollege);
+    setDebouncedSalaryWithCollege(salaryWithCollege);
+    setDebouncedSchoolYears(schoolYears);
     setShowResults(true);
   };
 
@@ -115,6 +122,14 @@ export default function CollegeCostCalculator() {
     }).format(value);
   };
 
+  const formatCurrencyWithSign = (value: number) => {
+    const formattedValue = formatCurrency(Math.abs(value));
+    if (value > 0) {
+      return `$+${formattedValue.slice(1)}`;
+    }
+    return `$-${formattedValue.slice(1)}`;
+  };
+
   const handleCurrencyInput = (value: string, setter: React.Dispatch<React.SetStateAction<number>>) => {
     const numericValue = parseInt(value.replace(/[^0-9]/g, ''), 10);
     setter(isNaN(numericValue) ? 0 : numericValue);
@@ -149,10 +164,10 @@ export default function CollegeCostCalculator() {
 
   const calculateLifetimeEarnings = () => {
     const nonCollegeYears = 45;
-    const collegeYears = 45 - parseInt(schoolYears);
+    const collegeYears = 45 - parseInt(debouncedSchoolYears);
     
-    const nonCollegeEarnings = nonCollegeYears * salaryWithoutCollege;
-    const collegeEarnings = collegeYears * salaryWithCollege;
+    const nonCollegeEarnings = nonCollegeYears * debouncedSalaryWithoutCollege;
+    const collegeEarnings = collegeYears * debouncedSalaryWithCollege;
 
     return [
       {
@@ -166,6 +181,11 @@ export default function CollegeCostCalculator() {
         years: collegeYears
       }
     ];
+  };
+
+  const calculateEarningsDifference = () => {
+    const lifetimeEarnings = calculateLifetimeEarnings();
+    return lifetimeEarnings[1].earnings - lifetimeEarnings[0].earnings;
   };
 
   return (
@@ -249,6 +269,34 @@ export default function CollegeCostCalculator() {
       {showResults && (
         <CardFooter>
           <div className="grid gap-4 w-full">
+            <div className="grid gap-4">
+              <h3 className="font-semibold">
+                Lifetime Earnings Comparison ({formatCurrencyWithSign(calculateEarningsDifference())})
+                <InfoTooltip content="Comparison of total earnings over a 45-year career period. College path accounts for years spent in school." />
+              </h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={calculateLifetimeEarnings()}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis 
+                    tickFormatter={(value) => formatCurrency(value)}
+                    width={100}
+                  />
+                  <Tooltip
+                    formatter={(value: any) => formatCurrency(value)}
+                    labelFormatter={(label) => `${label} (${calculateLifetimeEarnings().find(item => item.name === label)?.years} years)`}
+                  />
+                  <Bar dataKey="earnings" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="text-sm text-muted-foreground">
+                <p>Without College: {formatCurrency(calculateLifetimeEarnings()[0].earnings)} (45 years)</p>
+                <p>With College: {formatCurrency(calculateLifetimeEarnings()[1].earnings)} ({45 - parseInt(schoolYears)} years)</p>
+              </div>
+            </div>
             <div>
               <h3 className="font-semibold">Total Cost</h3>
               <p className="text-4xl font-bold">{formatCurrencyWithCents(totalCost)}</p>
@@ -301,33 +349,6 @@ export default function CollegeCostCalculator() {
                   ? `You will break even on your college investment in approximately ${breakEvenYears.toFixed(1)} years.`
                   : 'Unable to calculate break-even point.'}
               </p>
-            </div>
-            <div className="grid gap-4">
-              <h3 className="font-semibold">Lifetime Earnings Comparison +({formatCurrency(calculateLifetimeEarnings()[1].earnings - calculateLifetimeEarnings()[0].earnings)})
-                <InfoTooltip content="Comparison of total earnings over a 45-year career period. College path accounts for years spent in school." />
-              </h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart
-                  data={calculateLifetimeEarnings()}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis 
-                    tickFormatter={(value) => formatCurrency(value)}
-                    width={100}
-                  />
-                  <Tooltip
-                    formatter={(value: any) => formatCurrency(value)}
-                    labelFormatter={(label) => `${label} (${calculateLifetimeEarnings().find(item => item.name === label)?.years} years)`}
-                  />
-                  <Bar dataKey="earnings" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="text-sm text-muted-foreground">
-                <p>Without College: {formatCurrency(calculateLifetimeEarnings()[0].earnings)} (45 years)</p>
-                <p>With College: {formatCurrency(calculateLifetimeEarnings()[1].earnings)} ({45 - parseInt(schoolYears)} years)</p>
-              </div>
             </div>
           </div>
         </CardFooter>
