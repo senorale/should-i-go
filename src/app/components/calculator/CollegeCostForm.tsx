@@ -112,9 +112,6 @@ export default function CollegeCostForm({
       </div>
       
       <OccupationSelects 
-        onOccupationSelect={(code) => {
-          console.log('Selected occupation code:', code);
-        }}
         setSalaryWithCollege={setSalaryWithCollege}
       />
 

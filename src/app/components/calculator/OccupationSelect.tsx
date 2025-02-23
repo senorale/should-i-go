@@ -12,7 +12,6 @@ import { InfoIcon } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface OccupationSelectsProps {
-  onOccupationSelect: (code: string) => void;
   setSalaryWithCollege: React.Dispatch<React.SetStateAction<number>>;
 }
 
@@ -48,7 +47,7 @@ const InfoTooltip = ({ content, footerLink }: { content: string; footerLink?: st
   );
 };
 
-export default function OccupationSelects({ onOccupationSelect, setSalaryWithCollege }: OccupationSelectsProps) {
+export default function OccupationSelects({ setSalaryWithCollege }: OccupationSelectsProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedOccupation, setSelectedOccupation] = useState<string>('');
 
@@ -61,25 +60,30 @@ export default function OccupationSelects({ onOccupationSelect, setSalaryWithCol
 
   const fetchSalaryData = async (occupationCode: string) => {
     try {
+      const seriesID = `${OES_BASE}${occupationCode}${DATA_TYPE}`;
+      console.log('Series ID:', seriesID);
+
       const response = await fetch('/api/bls', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          seriesid: [`${OES_BASE}${occupationCode}${DATA_TYPE}`],
+          seriesid: [seriesID],
           startyear: "2023",
           endyear: "2023",
         })
       });
 
       const data = await response.json();
+      console.log('API Response:', data);
+
       if (data.status === "REQUEST_SUCCEEDED" && data.Results?.series?.[0]?.data?.[0]) {
         const valueData = data.Results.series[0].data[0];
         let salary: number;
         
         if (valueData.value === "-" && valueData.footnotes?.[0]?.text?.includes("239,200")) {
-          salary = 239200; // Use the minimum value when salary exceeds this amount
+          salary = 239200;
         } else {
           salary = parseFloat(valueData.value);
         }
@@ -97,7 +101,6 @@ export default function OccupationSelects({ onOccupationSelect, setSalaryWithCol
     setSelectedOccupation(value);
     const category = OCCUPATIONS[selectedCategory as keyof typeof OCCUPATIONS];
     const occupationCode = category[value as keyof typeof category];
-    onOccupationSelect(occupationCode);
     fetchSalaryData(occupationCode);
   };
 
