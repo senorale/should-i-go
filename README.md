@@ -17,7 +17,7 @@ To run this project locally:
 1. Clone the repository:
    ```bash
    git clone https://github.com/mikebranc/should-i-go.git
-   cd college-cost-calculator
+   cd should-i-go
    ```
 
 2. Install dependencies:
