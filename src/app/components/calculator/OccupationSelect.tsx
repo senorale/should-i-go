@@ -102,23 +102,25 @@ export default function OccupationSelects({ onOccupationSelect, setSalaryWithCol
   };
 
   return (
-    <div className="grid gap-2">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <Label>Occupation</Label>
         <InfoTooltip 
           content={occupationTooltipText}
         />
       </div>
-      <div className="flex gap-4">
-        <div className="flex-1 max-w-[200px]">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
           <Label htmlFor="category">Occupation Category</Label>
           <Select value={selectedCategory} onValueChange={handleCategoryChange}>
             <SelectTrigger id="category">
-              <SelectValue placeholder="Select a category" />
+              <div className="flex-1 text-left">
+                <SelectValue placeholder="Select a category" />
+              </div>
             </SelectTrigger>
             <SelectContent className="max-h-[200px]">
               {categories.map((category) => (
-                <SelectItem key={category} value={category}>
+                <SelectItem key={category} value={category} className="text-left">
                   {category}
                 </SelectItem>
               ))}
@@ -126,7 +128,7 @@ export default function OccupationSelects({ onOccupationSelect, setSalaryWithCol
           </Select>
         </div>
 
-        <div className="flex-1 max-w-[200px]">
+        <div className="flex-1">
           <Label htmlFor="occupation">Specific Occupation</Label>
           <Select 
             value={selectedOccupation} 
@@ -134,11 +136,13 @@ export default function OccupationSelects({ onOccupationSelect, setSalaryWithCol
             disabled={!selectedCategory}
           >
             <SelectTrigger id="occupation">
-              <SelectValue placeholder="Select an occupation" />
+              <div className="flex-1 text-left">
+                <SelectValue placeholder="Select an occupation" />
+              </div>
             </SelectTrigger>
             <SelectContent className="max-h-[200px]">
               {selectedCategory && Object.keys(OCCUPATIONS[selectedCategory as keyof typeof OCCUPATIONS]).map((occupation) => (
-                <SelectItem key={occupation} value={occupation}>
+                <SelectItem key={occupation} value={occupation} className="text-left">
                   {occupation}
                 </SelectItem>
               ))}

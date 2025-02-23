@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { InfoIcon } from 'lucide-react';
 
 import { calculateTotalInterestPaid, calculateBreakEvenYears } from '../../utils';
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card"
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import LifetimeEarnings from './LifeTimeEarnings';
 import TotalCost from './TotalCost';
@@ -194,34 +194,36 @@ export default function CollegeCostCalculator() {
   };
 
   return (
-    <Card className="max-w-2xl w-full mx-auto p-6">
-      <CardHeader>
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader className="space-y-1">
         <CardTitle>College Cost Calculator</CardTitle>
         <CardDescription>Calculate the true cost of college</CardDescription>
       </CardHeader>
-      <CollegeCostForm
-        tuition={tuition}
-        loan={loan}
-        interest={interest}
-        salaryWithoutCollege={salaryWithoutCollege}
-        salaryWithCollege={salaryWithCollege}
-        schoolYears={schoolYears}
-        showResults={showResults}
-        formatCurrency={formatCurrency}
-        handleCurrencyInput={handleCurrencyInput}
-        handleInterestInput={handleInterestInput}
-        handleSchoolYearsChange={handleSchoolYearsChange}
-        setTuition={setTuition}
-        setLoan={setLoan}
-        setInterest={setInterest}
-        setSalaryWithoutCollege={setSalaryWithoutCollege}
-        setSalaryWithCollege={setSalaryWithCollege}
-        setSchoolYears={setSchoolYears}
-        calculateCosts={calculateCosts}
-      />
+      <CardContent className="flex flex-col gap-4">
+        <CollegeCostForm
+          tuition={tuition}
+          loan={loan}
+          interest={interest}
+          salaryWithoutCollege={salaryWithoutCollege}
+          salaryWithCollege={salaryWithCollege}
+          schoolYears={schoolYears}
+          showResults={showResults}
+          formatCurrency={formatCurrency}
+          handleCurrencyInput={handleCurrencyInput}
+          handleInterestInput={handleInterestInput}
+          handleSchoolYearsChange={handleSchoolYearsChange}
+          setTuition={setTuition}
+          setLoan={setLoan}
+          setInterest={setInterest}
+          setSalaryWithoutCollege={setSalaryWithoutCollege}
+          setSalaryWithCollege={setSalaryWithCollege}
+          setSchoolYears={setSchoolYears}
+          calculateCosts={calculateCosts}
+        />
+      </CardContent>
       {showResults && (
-        <CardFooter>
-          <div className="grid gap-4 w-full">
+        <CardFooter className="flex flex-col w-full p-6">
+          <div className="flex flex-col w-full gap-4">
             <LifetimeEarnings 
               formatCurrencyWithSign={formatCurrencyWithSign}
               calculateEarningsDifference={calculateEarningsDifference}

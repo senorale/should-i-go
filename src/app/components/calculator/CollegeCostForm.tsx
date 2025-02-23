@@ -47,8 +47,8 @@ export default function CollegeCostForm({
   calculateCosts,
 }: CollegeCostFormProps) {
   return (
-    <CardContent className="grid gap-4">
-      <div className="grid gap-2">
+    <div className="flex flex-col w-full gap-4">
+      <div className="flex flex-col gap-2">
         <Label htmlFor="tuition">Tuition Cost</Label>
         <Input
           id="tuition"
@@ -57,7 +57,8 @@ export default function CollegeCostForm({
           onChange={(e) => handleCurrencyInput(e.target.value, setTuition)}
         />
       </div>
-      <div className="grid gap-2">
+      
+      <div className="flex flex-col gap-2">
         <Label htmlFor="loan">Loan Amount</Label>
         <Input
           id="loan"
@@ -66,7 +67,8 @@ export default function CollegeCostForm({
           onChange={(e) => handleCurrencyInput(e.target.value, setLoan)}
         />
       </div>
-      <div className="grid gap-2">
+
+      <div className="flex flex-col gap-2">
         <Label htmlFor="interest">Interest Rate (%)</Label>
         <Input
           id="interest"
@@ -83,7 +85,8 @@ export default function CollegeCostForm({
           }}
         />
       </div>
-      <div className="grid gap-2">
+
+      <div className="flex flex-col gap-2">
         <Label htmlFor="school-years">Years in School</Label>
         <Input
           id="school-years"
@@ -97,7 +100,8 @@ export default function CollegeCostForm({
           }}
         />
       </div>
-      <div className="grid gap-2">
+
+      <div className="flex flex-col gap-2">
         <Label htmlFor="no-college">Salary without College</Label>
         <Input
           id="no-college"
@@ -114,7 +118,7 @@ export default function CollegeCostForm({
         setSalaryWithCollege={setSalaryWithCollege}
       />
 
-      <div className="grid gap-2">
+      <div className="flex flex-col gap-2">
         <Label htmlFor="with-college">Salary with College</Label>
         <Input
           id="with-college"
@@ -123,9 +127,12 @@ export default function CollegeCostForm({
           onChange={(e) => handleCurrencyInput(e.target.value, setSalaryWithCollege)}
         />
       </div>
+
       {!showResults && (
-        <Button onClick={calculateCosts}>Calculate</Button>
+        <Button onClick={calculateCosts} className="w-full mt-2">
+          Calculate
+        </Button>
       )}
-    </CardContent>
+    </div>
   );
 }

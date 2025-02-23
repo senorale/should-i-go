@@ -4,7 +4,7 @@ interface DisclaimerProps {
 
 export default function Disclaimer({ githubLink }: DisclaimerProps) {
   return (
-    <div className="mt-6 text-xs text-muted-foreground border-t pt-4">
+    <div className="px-6 pb-6 pt-4 text-xs text-muted-foreground border-t">
       <p>
         Disclaimer: This tool is designed to help you make a more informed decision when deciding what to do with your future. 
         This program nor its creators are liable for any decisions you make based on the information this tool provides. 
