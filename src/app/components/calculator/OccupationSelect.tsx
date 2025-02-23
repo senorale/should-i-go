@@ -19,12 +19,7 @@ interface OccupationSelectsProps {
 const OES_BASE = 'OEUN0000000000000';
 const DATA_TYPE = '13';
 
-const occupationTooltip = (
-  <div>
-    Salary data comes from the U.S. Bureau of Labor Statistics (BLS). 
-    Note: The highest reported annual salary is capped at $239,200.
-  </div>
-);
+const occupationTooltipText = "Salary data comes from the U.S. Bureau of Labor Statistics (BLS). Note: The highest reported annual salary is capped at $239,200.";
 
 const InfoTooltip = ({ content, footerLink }: { content: string; footerLink?: string }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -111,7 +106,7 @@ export default function OccupationSelects({ onOccupationSelect, setSalaryWithCol
       <div className="flex items-center gap-2">
         <Label>Occupation</Label>
         <InfoTooltip 
-          content="Salary data comes from the U.S. Bureau of Labor Statistics (BLS). Note: The highest reported annual salary is capped at $239,200."
+          content={occupationTooltipText}
         />
       </div>
       <div className="flex gap-4">
