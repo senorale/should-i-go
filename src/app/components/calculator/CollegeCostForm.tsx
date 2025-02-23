@@ -3,6 +3,7 @@ import { CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import OccupationSelects from './OccupationSelect';
 
 interface CollegeCostFormProps {
   tuition: number;
@@ -105,6 +106,14 @@ export default function CollegeCostForm({
           onChange={(e) => handleCurrencyInput(e.target.value, setSalaryWithoutCollege)}
         />
       </div>
+      
+      <OccupationSelects 
+        onOccupationSelect={(code) => {
+          console.log('Selected occupation code:', code);
+        }}
+        setSalaryWithCollege={setSalaryWithCollege}
+      />
+
       <div className="grid gap-2">
         <Label htmlFor="with-college">Salary with College</Label>
         <Input
