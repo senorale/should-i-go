@@ -8,11 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { InfoIcon } from 'lucide-react';
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
 
 interface OccupationSelectsProps {
   setSalaryWithCollege: React.Dispatch<React.SetStateAction<number>>;
+  InfoTooltip: React.ComponentType<{ content: string; footerLink?: string }>;
 }
 
 const OES_BASE = 'OEUN0000000000000';
@@ -20,34 +20,7 @@ const DATA_TYPE = '13';
 
 const occupationTooltipText = "Salary data comes from the U.S. Bureau of Labor Statistics (BLS). Note: The highest reported annual salary is capped at $239,200.";
 
-const InfoTooltip = ({ content, footerLink }: { content: string; footerLink?: string }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <TooltipProvider>
-      <UITooltip open={isOpen} onOpenChange={setIsOpen}>
-        <TooltipTrigger asChild>
-          <InfoIcon
-            className="h-4 w-4 ml-1 inline-block cursor-help"
-            onClick={() => setIsOpen(!isOpen)}
-          />
-        </TooltipTrigger>
-        <TooltipContent sideOffset={5} className="max-w-sm">
-          <div>{content}</div>
-          {footerLink && (
-            <div className="mt-2 text-xs">
-              <a href={footerLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline" style={{textDecoration: 'underline', color: 'blue'}}>
-                {footerLink}
-              </a>
-            </div>
-          )}
-        </TooltipContent>
-      </UITooltip>
-    </TooltipProvider>
-  );
-};
-
-export default function OccupationSelects({ setSalaryWithCollege }: OccupationSelectsProps) {
+export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }: OccupationSelectsProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedOccupation, setSelectedOccupation] = useState<string>('');
 

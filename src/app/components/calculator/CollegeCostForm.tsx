@@ -1,8 +1,8 @@
 import React from 'react';
-import { CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { InfoTooltip } from './InfoTooltip';
 import OccupationSelects from './OccupationSelect';
 
 interface CollegeCostFormProps {
@@ -102,7 +102,13 @@ export default function CollegeCostForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="no-college">Salary without College</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="no-college">Salary without College</Label>
+          <InfoTooltip 
+            content="Default salary data comes from the U.S. Bureau of Labor Statistics (BLS) 2023 study on earnings by educational attainment."
+            footerLink="https://www.bls.gov/careeroutlook/2024/data-on-display/education-pays.htm"
+          />
+        </div>
         <Input
           id="no-college"
           type="text"
@@ -113,10 +119,17 @@ export default function CollegeCostForm({
       
       <OccupationSelects 
         setSalaryWithCollege={setSalaryWithCollege}
+        InfoTooltip={InfoTooltip}
       />
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="with-college">Salary with College</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="with-college">Salary with College</Label>
+          <InfoTooltip 
+            content="Default salary data comes from the U.S. Bureau of Labor Statistics (BLS) 2023 study on earnings by educational attainment."
+            footerLink="https://www.bls.gov/careeroutlook/2024/data-on-display/education-pays.htm"
+          />
+        </div>
         <Input
           id="with-college"
           type="text"

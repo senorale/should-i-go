@@ -9,37 +9,12 @@ import LifetimeEarnings from './LifeTimeEarnings';
 import TotalCost from './TotalCost';
 import BreakEvenPoint from './BreakEvenPoint';
 import Disclaimer from './Disclaimer';
+import { InfoTooltip } from './InfoTooltip';
 import CollegeCostForm from './CollegeCostForm';
 
 const STUDENT_LOAN_CALCULATION_LINK = "https://studentaid.gov/understand-aid/types/loans/interest-rates"
 const GITHUB_LINK = "https://github.com/mikebranc/should-i-go"
 
-const InfoTooltip = ({ content, footerLink }: { content: string; footerLink?: string }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <TooltipProvider>
-      <UITooltip open={isOpen} onOpenChange={setIsOpen}>
-        <TooltipTrigger asChild>
-          <InfoIcon
-            className="h-4 w-4 ml-1 inline-block cursor-help"
-            onClick={() => setIsOpen(!isOpen)}
-          />
-        </TooltipTrigger>
-        <TooltipContent sideOffset={5} className="max-w-sm">
-          <div>{content}</div>
-          {footerLink && (
-            <div className="mt-2 text-xs">
-              <a href={footerLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline" style={{textDecoration: 'underline', color: 'blue'}}>
-                {footerLink}
-              </a>
-            </div>
-          )}
-        </TooltipContent>
-      </UITooltip>
-    </TooltipProvider>
-  );
-};
 
 function useDebounce(callback: () => void, delay: number) {
   const timeoutRef = React.useRef<NodeJS.Timeout>();
@@ -60,8 +35,8 @@ export default function CollegeCostCalculator() {
   const [loan, setLoan] = useState(40000);
   // interest is a string to allow an empty input
   const [interest, setInterest] = useState<string>('5');
-  const [salaryWithoutCollege, setSalaryWithoutCollege] = useState(35000);
-  const [salaryWithCollege, setSalaryWithCollege] = useState(55000);
+  const [salaryWithoutCollege, setSalaryWithoutCollege] = useState(46748);
+  const [salaryWithCollege, setSalaryWithCollege] = useState(77636);
     // schoolYears is a string to allow an empty input
   const [schoolYears, setSchoolYears] = useState<string>('4');
 
