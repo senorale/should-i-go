@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { OCCUPATIONS } from '@/app/constants/occupations';
 import { Label } from "@/components/ui/label";
 import {
@@ -9,6 +9,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Occupation {
+  id: string;
+  name: string;
+  annual_salary: number;
+}
 
 interface OccupationSelectsProps {
   setSalaryWithCollege: React.Dispatch<React.SetStateAction<number>>;
@@ -21,60 +31,35 @@ const DATA_TYPE = '13';
 const occupationTooltipText = "Salary data comes from the U.S. Bureau of Labor Statistics (BLS). Note: The highest reported annual salary is capped at $239,200.";
 
 export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }: OccupationSelectsProps) {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [occupations, setOccupations] = useState<Occupation[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedOccupation, setSelectedOccupation] = useState<string>('');
 
-  const categories = Object.keys(OCCUPATIONS);
-
-  const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    setSelectedOccupation(''); 
-  };
-
-  const fetchSalaryData = async (occupationCode: string) => {
-    try {
-      const seriesID = `${OES_BASE}${occupationCode}${DATA_TYPE}`;
-      console.log('Series ID:', seriesID);
-
-      const response = await fetch('/api/bls', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          seriesid: [seriesID],
-          startyear: "2023",
-          endyear: "2023",
-        })
-      });
-
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const response = await fetch('/api/occupations/categories');
       const data = await response.json();
-      console.log('API Response:', data);
+      setCategories(data);
+    };
+    fetchCategories();
+  }, []);
 
-      if (data.status === "REQUEST_SUCCEEDED" && data.Results?.series?.[0]?.data?.[0]) {
-        const valueData = data.Results.series[0].data[0];
-        let salary: number;
-        
-        if (valueData.value === "-" && valueData.footnotes?.[0]?.text?.includes("239,200")) {
-          salary = 239200;
-        } else {
-          salary = parseFloat(valueData.value);
-        }
-        
-        if (!isNaN(salary)) {
-          setSalaryWithCollege(salary);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching BLS data:', error);
-    }
+  const handleCategoryChange = async (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedOccupation('');
+    
+    const response = await fetch(`/api/occupations/subcategories?categoryId=${categoryId}`);
+    const data = await response.json();
+    setOccupations(data);
   };
 
-  const handleOccupationChange = (value: string) => {
-    setSelectedOccupation(value);
-    const category = OCCUPATIONS[selectedCategory as keyof typeof OCCUPATIONS];
-    const occupationCode = category[value as keyof typeof category];
-    fetchSalaryData(occupationCode);
+  const handleOccupationChange = (occupationId: string) => {
+    setSelectedOccupation(occupationId);
+    const occupation = occupations.find(occ => occ.id === occupationId);
+    if (occupation) {
+      setSalaryWithCollege(occupation.annual_salary);
+    }
   };
 
   return (
@@ -89,15 +74,15 @@ export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }:
         <div className="flex-1">
           <Label htmlFor="category">Occupation Category</Label>
           <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-            <SelectTrigger id="category">
+            <SelectTrigger id="category" className={selectedCategory ? "w-[300px]" : ""}>
               <div className="flex-1 text-left">
                 <SelectValue placeholder="Select a category" />
               </div>
             </SelectTrigger>
             <SelectContent className="max-h-[200px]">
               {categories.map((category) => (
-                <SelectItem key={category} value={category} className="text-left">
-                  {category}
+                <SelectItem key={category.id} value={category.id} className="truncate">
+                  {category.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -111,15 +96,15 @@ export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }:
             onValueChange={handleOccupationChange}
             disabled={!selectedCategory}
           >
-            <SelectTrigger id="occupation">
+            <SelectTrigger id="occupation" className={selectedOccupation ? "w-[300px]" : ""}>
               <div className="flex-1 text-left">
                 <SelectValue placeholder="Select an occupation" />
               </div>
             </SelectTrigger>
             <SelectContent className="max-h-[200px]">
-              {selectedCategory && Object.keys(OCCUPATIONS[selectedCategory as keyof typeof OCCUPATIONS]).map((occupation) => (
-                <SelectItem key={occupation} value={occupation} className="text-left">
-                  {occupation}
+              {occupations.map((occupation) => (
+                <SelectItem key={occupation.id} value={occupation.id} className="truncate">
+                  {occupation.name}
                 </SelectItem>
               ))}
             </SelectContent>
