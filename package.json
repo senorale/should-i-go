@@ -6,10 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "create-db": "ts-node scripts/create-entries-from-csv.ts",
+    "create-29": "ts-node scripts/create-29-records.ts"
+
   },
   "dependencies": {
     "@next/third-parties": "^14.2.8",
+    "@prisma/client": "^6.4.1",
     "@radix-ui/react-icons": "^1.3.0",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-select": "^2.1.6",
@@ -17,6 +21,7 @@
     "@radix-ui/react-tooltip": "^1.1.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "csv-parse": "^5.6.0",
     "lucide-react": "^0.436.0",
     "next": "14.2.7",
     "react": "^18",

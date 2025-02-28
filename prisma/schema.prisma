@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model OccupationCategory {
+  id                       String                  @id @default(uuid())
+  name                     String                  @unique
+  occupation_code          String                  @unique
+  occupation_sub_categories OccupationSubCategory[]
+  created_at              DateTime                @default(now())
+  updated_at              DateTime                @updatedAt
+}
+
+model OccupationSubCategory {
+  id                  String             @id @default(uuid())
+  name                String
+  occupation_code     String             
+  annual_salary       Float              
+  category           OccupationCategory @relation(fields: [category_id], references: [id])
+  category_id        String             
+  created_at         DateTime           @default(now())
+  updated_at         DateTime           @updatedAt
+
+  @@unique([category_id, occupation_code])
+  @@index([occupation_code])
+}
