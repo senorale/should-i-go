@@ -1,10 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
-import { InfoIcon } from 'lucide-react';
-
 import { calculateTotalInterestPaid, calculateBreakEvenYears } from '../../utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card"
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import LifetimeEarnings from './LifeTimeEarnings';
 import TotalCost from './TotalCost';
 import BreakEvenPoint from './BreakEvenPoint';
@@ -37,8 +34,13 @@ export default function CollegeCostCalculator() {
   const [interest, setInterest] = useState<string>('5');
   const [salaryWithoutCollege, setSalaryWithoutCollege] = useState(46748);
   const [salaryWithCollege, setSalaryWithCollege] = useState(77636);
-    // schoolYears is a string to allow an empty input
+  // schoolYears is a string to allow an empty input
   const [schoolYears, setSchoolYears] = useState<string>('4');
+  
+  // New state for tracking occupation selection
+  const [hasSelectedOccupation, setHasSelectedOccupation] = useState(false);
+  const [occupationSalary, setOccupationSalary] = useState(0);
+  const [occupationName, setOccupationName] = useState('');
 
   const [totalCost, setTotalCost] = useState(0);
   const [loanInterest, setLoanInterest] = useState(0);
@@ -55,14 +57,17 @@ export default function CollegeCostCalculator() {
     const interestCost = parseFloat(calculateTotalInterestPaid(loan, parseFloat(interest), 10));
     const opportunityCostValue = salaryWithoutCollege * schoolYearsNum;
     const totalCostValue = tuition + interestCost + opportunityCostValue;
-    const breakEven = calculateBreakEvenYears(totalCostValue, salaryWithCollege, salaryWithoutCollege);
+    
+    // Use occupation salary if available, otherwise use the general college salary
+    const effectiveSalaryWithCollege = hasSelectedOccupation ? occupationSalary : salaryWithCollege;
+    const breakEven = calculateBreakEvenYears(totalCostValue, effectiveSalaryWithCollege, salaryWithoutCollege);
 
     setLoanInterest(interestCost);
     setOpportunityCost(opportunityCostValue);
     setTotalCost(totalCostValue);
     setBreakEvenYears(breakEven);
     setDebouncedSalaryWithoutCollege(salaryWithoutCollege);
-    setDebouncedSalaryWithCollege(salaryWithCollege);
+    setDebouncedSalaryWithCollege(effectiveSalaryWithCollege);
     setDebouncedSchoolYears(schoolYears);
     setShowResults(true);
   };
@@ -143,29 +148,48 @@ export default function CollegeCostCalculator() {
 
   const calculateLifetimeEarnings = () => {
     const nonCollegeYears = 45;
+    const collegeYears = 45 - 4;
     const schoolYearsNum = parseInt(debouncedSchoolYears) || 0;
-    const collegeYears = 45 - schoolYearsNum;
+    const specificOccupationYears = 45 - schoolYearsNum;
     
     const nonCollegeEarnings = nonCollegeYears * debouncedSalaryWithoutCollege;
     const collegeEarnings = collegeYears * debouncedSalaryWithCollege;
-
-    return [
-      {
-        name: "Without College",
-        earnings: nonCollegeEarnings,
-        years: nonCollegeYears
-      },
-      {
-        name: "With College",
-        earnings: collegeEarnings,
-        years: collegeYears
-      }
-    ];
-  };
-
-  const calculateEarningsDifference = () => {
-    const lifetimeEarnings = calculateLifetimeEarnings();
-    return lifetimeEarnings[1].earnings - lifetimeEarnings[0].earnings;
+    const specificOccupationEarnings = specificOccupationYears * occupationSalary;
+    
+    if (hasSelectedOccupation) {
+      // Return three data points when an occupation is selected
+      return [
+        {
+          name: "High School Diploma",
+          earnings: nonCollegeEarnings,
+          years: nonCollegeYears
+        },
+        {
+          name: "Bachelor's Degree",
+          earnings: collegeEarnings,
+          years: collegeYears
+        },
+        {
+          name: occupationName,
+          earnings: specificOccupationEarnings,
+          years: specificOccupationYears
+        }
+      ];
+    } else {
+      // Return two data points when no occupation is selected
+      return [
+        {
+          name: "High School Diploma",
+          earnings: nonCollegeEarnings,
+          years: nonCollegeYears
+        },
+        {
+          name: "Bachelor's Degree",
+          earnings: collegeEarnings,
+          years: collegeYears
+        }
+      ];
+    }
   };
 
   return (
@@ -194,17 +218,26 @@ export default function CollegeCostCalculator() {
           setSalaryWithCollege={setSalaryWithCollege}
           setSchoolYears={setSchoolYears}
           calculateCosts={calculateCosts}
+          hasSelectedOccupation={hasSelectedOccupation}
+          setHasSelectedOccupation={setHasSelectedOccupation}
+          occupationSalary={occupationSalary}
+          setOccupationSalary={setOccupationSalary}
+          occupationName={occupationName}
+          setOccupationName={setOccupationName}
+          InfoTooltip={InfoTooltip}
         />
       </CardContent>
       {showResults && (
         <CardFooter className="flex flex-col w-full p-6">
           <div className="flex flex-col w-full gap-4">
             <LifetimeEarnings 
-              formatCurrencyWithSign={formatCurrencyWithSign}
-              calculateEarningsDifference={calculateEarningsDifference}
-              calculateLifetimeEarnings={calculateLifetimeEarnings}
-              formatCurrency={formatCurrency}
+              salaryWithoutCollege={salaryWithoutCollege}
+              salaryWithCollege={salaryWithCollege}
               schoolYears={schoolYears}
+              hasSelectedOccupation={hasSelectedOccupation}
+              occupationName={occupationName}
+              occupationSalary={occupationSalary}
+              formatCurrency={formatCurrency}
               InfoTooltip={InfoTooltip}
             />
             <TotalCost 

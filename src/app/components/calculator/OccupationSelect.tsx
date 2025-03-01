@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer"
+import { X } from "lucide-react";
 
 interface Category {
   id: string;
@@ -32,13 +33,22 @@ interface SearchResult {
 }
 
 interface OccupationSelectsProps {
-  setSalaryWithCollege: React.Dispatch<React.SetStateAction<number>>;
   InfoTooltip: React.ComponentType<{ content: string; footerLink?: string }>;
+  hasSelectedOccupation: boolean;
+  setHasSelectedOccupation: React.Dispatch<React.SetStateAction<boolean>>;
+  setOccupationSalary: React.Dispatch<React.SetStateAction<number>>;
+  setOccupationName: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const occupationTooltipText = "Salary data comes from the U.S. Bureau of Labor Statistics (BLS). Note: The highest reported annual salary is capped at $239,200.";
 
-export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }: OccupationSelectsProps) {
+export default function OccupationSelects({ 
+  InfoTooltip,
+  hasSelectedOccupation,
+  setHasSelectedOccupation,
+  setOccupationSalary,
+  setOccupationName
+}: OccupationSelectsProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [occupations, setOccupations] = useState<Occupation[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -59,6 +69,7 @@ export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }:
   const handleCategoryChange = async (categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedOccupation('');
+    setHasSelectedOccupation(false);
     
     const response = await fetch(`/api/occupations/subcategories?categoryId=${categoryId}`);
     const data = await response.json();
@@ -69,7 +80,9 @@ export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }:
     setSelectedOccupation(occupationId);
     const occupation = occupations.find(occ => occ.id === occupationId);
     if (occupation) {
-      setSalaryWithCollege(occupation.annual_salary);
+      setOccupationSalary(occupation.annual_salary);
+      setOccupationName(occupation.name);
+      setHasSelectedOccupation(true);
     }
   };
 
@@ -86,17 +99,30 @@ export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }:
   }
 
   const handleSearchResultSelect = (result: SearchResult) => {
-    setSalaryWithCollege(result.annual_salary)
-    setSearchQuery(result.name)
-    setSearchResults([]) // Clear results after selection
+    setOccupationSalary(result.annual_salary);
+    setOccupationName(result.name);
+    setHasSelectedOccupation(true);
+    
+    setSearchQuery(result.name);
+    setSearchResults([]);
   }
+
+  const clearOccupationSelection = () => {
+    setHasSelectedOccupation(false);
+    setSelectedCategory('');
+    setSelectedOccupation('');
+    setSearchQuery('');
+    setSearchResults([]);
+  };
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Label>Occupation</Label>
-          <InfoTooltip content={occupationTooltipText} />
+          <InfoTooltip content={occupationTooltipText} 
+          footerLink='https://www.bls.gov/oes/tables.htm' 
+          />
         </div>
         <Button
           onClick={() => {
@@ -106,7 +132,7 @@ export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }:
               setSearchResults([])
             }
           }}
-          className="w-auto mt-2"
+          size="sm"
         >
           {isSearchMode ? "Browse All Categories" : "Search Occupations"}
         </Button>
@@ -114,7 +140,20 @@ export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }:
 
       {isSearchMode ? (
         <div className="flex-1 mb-4 relative">
-          <Label htmlFor="search">Search Occupation</Label>
+          <div className="flex items-center mb-1">
+            <Label htmlFor="search">Search Occupation</Label>
+            {isSearchMode && hasSelectedOccupation && (
+              <Button
+                onClick={clearOccupationSelection}
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 ml-2"
+                aria-label="Clear occupation selection"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
           <Input
             id="search"
             value={searchQuery}
@@ -142,7 +181,9 @@ export default function OccupationSelects({ setSalaryWithCollege, InfoTooltip }:
       ) : (
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
-            <Label htmlFor="category">Occupation Category</Label>
+            <div className="flex items-center mb-1">
+              <Label htmlFor="category">Occupation Category</Label>
+            </div>
             <Select value={selectedCategory} onValueChange={handleCategoryChange}>
               <SelectTrigger id="category" className={selectedCategory ? "w-[300px]" : ""}>
                 <div className="flex-1 text-left truncate">

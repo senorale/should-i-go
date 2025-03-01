@@ -2,7 +2,6 @@ import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { InfoTooltip } from './InfoTooltip';
 import OccupationSelects from './OccupationSelect';
 
 interface CollegeCostFormProps {
@@ -24,6 +23,14 @@ interface CollegeCostFormProps {
   setSalaryWithCollege: React.Dispatch<React.SetStateAction<number>>;
   setSchoolYears: React.Dispatch<React.SetStateAction<string>>;
   calculateCosts: () => void;
+  hasSelectedOccupation: boolean;
+  setHasSelectedOccupation: React.Dispatch<React.SetStateAction<boolean>>;
+  occupationSalary: number;
+  setOccupationSalary: React.Dispatch<React.SetStateAction<number>>;
+  occupationName: string;
+  setOccupationName: React.Dispatch<React.SetStateAction<string>>;
+  InfoTooltip: React.ComponentType<{ content: string; footerLink?: string }>;
+
 }
 
 export default function CollegeCostForm({
@@ -45,6 +52,13 @@ export default function CollegeCostForm({
   setSalaryWithCollege,
   setSchoolYears,
   calculateCosts,
+  hasSelectedOccupation,
+  setHasSelectedOccupation,
+  occupationSalary,
+  setOccupationSalary,
+  occupationName,
+  setOccupationName,
+  InfoTooltip
 }: CollegeCostFormProps) {
   return (
     <div className="flex flex-col w-full gap-4">
@@ -103,40 +117,53 @@ export default function CollegeCostForm({
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <Label htmlFor="no-college">Salary without College</Label>
-          <InfoTooltip 
+          <Label htmlFor="salaryWithoutCollege">Highschool Diploma Median Salary</Label>
+          <InfoTooltip
             content="Default salary data comes from the U.S. Bureau of Labor Statistics (BLS) 2023 study on earnings by educational attainment."
             footerLink="https://www.bls.gov/careeroutlook/2024/data-on-display/education-pays.htm"
           />
         </div>
-        <Input
-          id="no-college"
-          type="text"
-          value={formatCurrency(salaryWithoutCollege)}
-          onChange={(e) => handleCurrencyInput(e.target.value, setSalaryWithoutCollege)}
-        />
+        <div className="p-3 border rounded-md">
+          <p className="text-sm text-gray-500">Annual Salary: {formatCurrency(salaryWithoutCollege)}</p>
+        </div>
       </div>
       
-      <OccupationSelects 
-        setSalaryWithCollege={setSalaryWithCollege}
-        InfoTooltip={InfoTooltip}
-      />
-
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <Label htmlFor="with-college">Salary with College</Label>
-          <InfoTooltip 
+          <Label htmlFor="salaryWithCollege">Bachelor's Degree Median Salary</Label>
+          <InfoTooltip
             content="Default salary data comes from the U.S. Bureau of Labor Statistics (BLS) 2023 study on earnings by educational attainment."
             footerLink="https://www.bls.gov/careeroutlook/2024/data-on-display/education-pays.htm"
           />
         </div>
-        <Input
-          id="with-college"
-          type="text"
-          value={formatCurrency(salaryWithCollege)}
-          onChange={(e) => handleCurrencyInput(e.target.value, setSalaryWithCollege)}
-        />
+        <div className="p-3 border rounded-md">
+          <p className="text-sm text-gray-500">Annual Salary: {formatCurrency(salaryWithCollege)}</p>
+        </div>
       </div>
+      
+      <OccupationSelects
+        InfoTooltip={InfoTooltip}
+        hasSelectedOccupation={hasSelectedOccupation}
+        setHasSelectedOccupation={setHasSelectedOccupation}
+        setOccupationSalary={setOccupationSalary}
+        setOccupationName={setOccupationName}
+      />
+      
+      {hasSelectedOccupation && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Label>Selected Occupation</Label>
+            <InfoTooltip 
+              content="Salary data comes from the U.S. Bureau of Labor Statistics (BLS)." 
+              footerLink='https://www.bls.gov/oes/tables.htm'
+            />
+          </div>
+          <div className="p-3 border rounded-md">
+            <p className="font-medium">{occupationName}</p>
+            <p className="text-sm text-gray-500">Annual Salary: {formatCurrency(occupationSalary)}</p>
+          </div>
+        </div>
+      )}
 
       {!showResults && (
         <Button onClick={calculateCosts} className="w-full mt-2">
