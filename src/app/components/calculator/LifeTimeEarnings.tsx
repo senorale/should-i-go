@@ -72,7 +72,7 @@ const LifetimeEarnings = ({
     <div className="grid gap-4">
       <h3 className="font-semibold">
         Lifetime Earnings Comparison
-        <InfoTooltip content="Comparison of total earnings over a 45-year career period. College paths account for years spent in school." />
+        <InfoTooltip content="Comparison of total earnings over a 45-year career period. We assume 4 years spent in school for the Bachelor's calculation." />
       </h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart

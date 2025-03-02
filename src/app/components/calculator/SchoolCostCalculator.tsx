@@ -32,37 +32,38 @@ export default function SchoolCostCalculator() {
     parseFloat(CollegeConstants.STUDENT_LOAN_INTEREST_RATE), 
     10
   ));
-  const specificInterestCost = parseFloat(calculateTotalInterestPaid(
-    loan, 
-    parseFloat(interest), 
-    10
-  ));
   
   const medianOpportunityCost = CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY * 
-    parseFloat(CollegeConstants.BACHELOR_YEARS_IN_SCHOOL);
-
-  const specificOpportunityCost = occupationSalary * 
-    parseFloat(schoolYears);
+  parseFloat(CollegeConstants.BACHELOR_YEARS_IN_SCHOOL);
   
   const medianTotalCost = CollegeConstants.MEDIAN_TOTAL_TUITION_COST + 
     medianInterestCost + 
     medianOpportunityCost;
-
-  const specificTotalCost = tuition + 
-    specificInterestCost + 
-    specificOpportunityCost;
   
   const medianBreakEvenYears = calculateBreakEvenYears(
     medianTotalCost,
     CollegeConstants.BACHELOR_DEGREE_MEDIAN_SALARY,
     CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY
   );
+  
+  const specificInterestCost = parseFloat(calculateTotalInterestPaid(
+    loan, 
+    parseFloat(interest), 
+    10
+  ));
+  const specificOpportunityCost = occupationSalary * 
+      parseFloat(schoolYears);
+  
+  const specificTotalCost = tuition + 
+    specificInterestCost + 
+    specificOpportunityCost;
+    
   const specificBreakEvenYears = calculateBreakEvenYears(
-    specificTotalCost,
-    occupationSalary,
-    CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY
-  );
-
+      specificTotalCost,
+      occupationSalary,
+      CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY
+    );
+    
   const calculateMedianCosts = () => {
     setShowResults(true);
   };

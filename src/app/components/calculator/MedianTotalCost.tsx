@@ -30,14 +30,14 @@ export default function MedianTotalCost({
       
       <div className="grid grid-cols-3 gap-4 mt-4">
         <div className="text-center">
-          <div className="text-sm text-muted-foreground">Tuition</div>
+          <div className="text-sm text-muted-foreground">Total Tuition Cost</div>
           <div className="text-xl font-bold" style={{ color: COLORS[0] }}>
             ${CollegeConstants.MEDIAN_TOTAL_TUITION_COST.toLocaleString()}
           </div>
         </div>
         <div className="text-center">
           <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-            Interest
+            Interest Cost
             <InfoTooltip 
               content="The total interest paid on your student loans assuming a 10 year loan. Uses daily simple interest. See more on how this is calculated here:"
               footerLink={CollegeConstants.STUDENT_LOAN_CALCULATION_LINK}
