@@ -1,9 +1,8 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import * as CollegeConstants from '@/app/constants/college_related_constants';
 
 interface LifetimeEarningsProps {
-  salaryWithoutCollege: number;
-  salaryWithCollege: number;
   schoolYears: string;
   hasSelectedOccupation: boolean;
   occupationName: string;
@@ -13,8 +12,6 @@ interface LifetimeEarningsProps {
 }
 
 const LifetimeEarnings = ({
-  salaryWithoutCollege,
-  salaryWithCollege,
   schoolYears,
   hasSelectedOccupation,
   occupationName,
@@ -24,25 +21,26 @@ const LifetimeEarnings = ({
 }: LifetimeEarningsProps) => {
   // Calculate lifetime earnings data
   const calculateLifetimeEarnings = () => {
-    const nonCollegeYears = 45;
+    const nonSchoolYears = 45;
+    const medianBachelorYears = 41;
     const schoolYearsNum = parseInt(schoolYears) || 0;
     const collegeYears = 45 - schoolYearsNum;
     
-    const nonCollegeEarnings = nonCollegeYears * salaryWithoutCollege;
-    const collegeEarnings = collegeYears * salaryWithCollege;
+    const medianHighSchoolDiplomaEarnings = nonSchoolYears * CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY;
+    const medianBachelorEarningsEarnings = medianBachelorYears * CollegeConstants.BACHELOR_DEGREE_MEDIAN_SALARY;
     
     if (hasSelectedOccupation) {
       // Return three data points when an occupation is selected
       return [
         {
           name: "High School Diploma",
-          earnings: nonCollegeEarnings,
-          years: nonCollegeYears
+          earnings: medianHighSchoolDiplomaEarnings,
+          years: nonSchoolYears
         },
         {
           name: "Bachelor's Degree",
-          earnings: collegeEarnings,
-          years: collegeYears
+          earnings: medianBachelorEarningsEarnings,
+          years: medianBachelorYears
         },
         {
           name: occupationName,
@@ -55,13 +53,13 @@ const LifetimeEarnings = ({
       return [
         {
           name: "High School Diploma",
-          earnings: nonCollegeEarnings,
-          years: nonCollegeYears
+          earnings: medianHighSchoolDiplomaEarnings,
+          years: nonSchoolYears
         },
         {
           name: "Bachelor's Degree",
-          earnings: collegeEarnings,
-          years: collegeYears
+          earnings: medianBachelorEarningsEarnings,
+          years: medianBachelorYears
         }
       ];
     }

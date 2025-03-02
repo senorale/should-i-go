@@ -134,7 +134,7 @@ export default function OccupationSelects({
           }}
           size="sm"
         >
-          {isSearchMode ? "Browse All Categories" : "Search Occupations"}
+          {isSearchMode ? "Browse All Occupations" : "Search Occupations"}
         </Button>
       </div>
 

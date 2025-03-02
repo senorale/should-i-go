@@ -1,9 +1,9 @@
-interface BreakEvenPointProps {
+interface MedianBreakEvenPointProps {
   breakEvenYears: number | string;
-  InfoTooltip: React.ComponentType<{ content: string; footerLink?: string }>;
+  InfoTooltip: React.ComponentType<{ content: string }>;
 }
 
-export default function BreakEvenPoint({ breakEvenYears, InfoTooltip }: BreakEvenPointProps) {
+export default function BreakEvenPoint({ breakEvenYears, InfoTooltip }: MedianBreakEvenPointProps) {
   return (
     <div className="grid gap-2">
       <h2 className="text-3xl font-semibold">
