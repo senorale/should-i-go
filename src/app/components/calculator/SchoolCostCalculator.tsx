@@ -3,11 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { calculateTotalInterestPaid, calculateBreakEvenYears } from '../../utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card"
 import LifetimeEarnings from './LifeTimeEarnings';
-import MedianTotalCost from './MedianTotalCost';
-import MedianBreakEvenPoint from './MedianBreakEvenPoint';
 import Disclaimer from './Disclaimer';
 import { InfoTooltip } from './InfoTooltip';
 import SchoolCostForm from './SchoolCostForm';
+import TotalCost from './TotalCost';
 import * as CollegeConstants from '@/app/constants/college_related_constants';
 
 
@@ -33,17 +32,34 @@ export default function SchoolCostCalculator() {
     parseFloat(CollegeConstants.STUDENT_LOAN_INTEREST_RATE), 
     10
   ));
+  const specificInterestCost = parseFloat(calculateTotalInterestPaid(
+    loan, 
+    parseFloat(interest), 
+    10
+  ));
   
   const medianOpportunityCost = CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY * 
     parseFloat(CollegeConstants.BACHELOR_YEARS_IN_SCHOOL);
+
+  const specificOpportunityCost = occupationSalary * 
+    parseFloat(schoolYears);
   
   const medianTotalCost = CollegeConstants.MEDIAN_TOTAL_TUITION_COST + 
     medianInterestCost + 
     medianOpportunityCost;
+
+  const specificTotalCost = tuition + 
+    specificInterestCost + 
+    specificOpportunityCost;
   
   const medianBreakEvenYears = calculateBreakEvenYears(
     medianTotalCost,
     CollegeConstants.BACHELOR_DEGREE_MEDIAN_SALARY,
+    CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY
+  );
+  const specificBreakEvenYears = calculateBreakEvenYears(
+    specificTotalCost,
+    occupationSalary,
     CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY
   );
 
@@ -124,16 +140,20 @@ export default function SchoolCostCalculator() {
               formatCurrency={formatCurrency}
               InfoTooltip={InfoTooltip}
             />
-            <MedianTotalCost 
+            <TotalCost
+              hasSelectedOccupation={hasSelectedOccupation}
               medianTotalCost={medianTotalCost}
               medianInterestCost={medianInterestCost}
               medianOpportunityCost={medianOpportunityCost}
+              tuition={tuition}
+              loan={loan}
+              interest={interest}
+              schoolYears={schoolYears}
+              occupationName={occupationName}
               COLORS={COLORS}
               InfoTooltip={InfoTooltip}
-            />
-            <MedianBreakEvenPoint 
-              breakEvenYears={medianBreakEvenYears}
-              InfoTooltip={InfoTooltip}
+              medianBreakEvenYears={medianBreakEvenYears}
+              specificBreakEvenYears={specificBreakEvenYears}
             />
           </div>
         </CardFooter>
