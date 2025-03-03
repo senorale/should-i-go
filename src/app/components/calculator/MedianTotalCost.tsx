@@ -19,6 +19,12 @@ export default function MedianTotalCost({
   InfoTooltip
 }: MedianTotalCostProps) {
 
+  // Round numbers to nearest whole number
+  const roundedTuitionCost = Math.round(CollegeConstants.MEDIAN_TOTAL_TUITION_COST);
+  const roundedInterestCost = Math.round(medianInterestCost);
+  const roundedOpportunityCost = Math.round(medianOpportunityCost);
+  const roundedTotalCost = Math.round(medianTotalCost);
+
   return (
     <div className="p-4 border rounded-lg">
       <div className="flex items-center justify-between mb-2">
@@ -32,7 +38,7 @@ export default function MedianTotalCost({
         <div className="text-center">
           <div className="text-sm text-muted-foreground">Total Tuition Cost</div>
           <div className="text-xl font-bold" style={{ color: COLORS[0] }}>
-            ${CollegeConstants.MEDIAN_TOTAL_TUITION_COST.toLocaleString()}
+            ${roundedTuitionCost.toLocaleString()}
           </div>
         </div>
         <div className="text-center">
@@ -44,7 +50,7 @@ export default function MedianTotalCost({
             />
           </div>
           <div className="text-xl font-bold" style={{ color: COLORS[1] }}>
-            ${medianInterestCost.toLocaleString()}
+            ${roundedInterestCost.toLocaleString()}
           </div>
         </div>
         <div className="text-center">
@@ -54,7 +60,7 @@ export default function MedianTotalCost({
             />
           </div>
           <div className="text-xl font-bold" style={{ color: COLORS[2] }}>
-            ${medianOpportunityCost.toLocaleString()}
+            ${roundedOpportunityCost.toLocaleString()}
           </div>
         </div>
       </div>
@@ -62,7 +68,7 @@ export default function MedianTotalCost({
       <div className="mt-4">
         <div className="text-sm text-muted-foreground text-center">Total Cost</div>
         <div className="text-2xl font-bold text-center">
-          ${medianTotalCost.toLocaleString()}
+          ${roundedTotalCost.toLocaleString()}
         </div>
       </div>
       
@@ -72,7 +78,7 @@ export default function MedianTotalCost({
           <InfoTooltip content="The number of years it takes for the higher income from a college degree to offset the total cost of college." />
         </div>
         <div className="text-xl font-bold text-center">
-          {typeof medianBreakEvenYears === 'number' ? `${medianBreakEvenYears.toFixed(1)} years` : 'N/A'}
+          {typeof medianBreakEvenYears === 'number' ? `${Math.round(medianBreakEvenYears * 10) / 10} years` : 'N/A'}
         </div>
       </div>
     </div>
