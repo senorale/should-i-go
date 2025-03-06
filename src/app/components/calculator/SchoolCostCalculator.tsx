@@ -24,7 +24,6 @@ export default function SchoolCostCalculator() {
   const [hasSelectedOccupation, setHasSelectedOccupation] = useState(false);
   const [occupationSalary, setOccupationSalary] = useState(0);
   const [occupationName, setOccupationName] = useState('');
-  const [showResults, setShowResults] = useState(false);
   
   // Calculate median costs using constants
   const medianInterestCost = parseFloat(calculateTotalInterestPaid(
@@ -45,7 +44,7 @@ export default function SchoolCostCalculator() {
     CollegeConstants.BACHELOR_DEGREE_MEDIAN_SALARY,
     CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY
   );
-  
+
   const specificInterestCost = parseFloat(calculateTotalInterestPaid(
     loan, 
     parseFloat(interest), 
@@ -63,10 +62,6 @@ export default function SchoolCostCalculator() {
       occupationSalary,
       CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY
     );
-    
-  const calculateMedianCosts = () => {
-    setShowResults(true);
-  };
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
@@ -111,7 +106,6 @@ export default function SchoolCostCalculator() {
           loan={loan}
           interest={interest}
           schoolYears={schoolYears}
-          showResults={showResults}
           formatCurrency={formatCurrency}
           handleCurrencyInput={handleCurrencyInput}
           handleInterestInput={handleInterestInput}
@@ -120,7 +114,6 @@ export default function SchoolCostCalculator() {
           setLoan={setLoan}
           setInterest={setInterest}
           setSchoolYears={setSchoolYears}
-          calculateMedianCosts={calculateMedianCosts}
           hasSelectedOccupation={hasSelectedOccupation}
           setHasSelectedOccupation={setHasSelectedOccupation}
           occupationSalary={occupationSalary}
@@ -130,7 +123,6 @@ export default function SchoolCostCalculator() {
           InfoTooltip={InfoTooltip}
         />
       </CardContent>
-      {showResults && (
         <CardFooter className="flex flex-col w-full p-6">
           <div className="flex flex-col w-full gap-4">
             <LifetimeEarnings 
@@ -158,7 +150,6 @@ export default function SchoolCostCalculator() {
             />
           </div>
         </CardFooter>
-      )}
       <Disclaimer githubLink={GITHUB_LINK} />
     </Card>
   );

@@ -10,7 +10,6 @@ interface SchoolCostFormProps {
   loan: number,
   interest: string,
   schoolYears: string,
-  showResults: boolean;
   formatCurrency: (value: number) => string;
   handleCurrencyInput: (value: string, setter: React.Dispatch<React.SetStateAction<number>>) => void;
   handleInterestInput: (value: string) => void;
@@ -19,7 +18,6 @@ interface SchoolCostFormProps {
   setLoan: React.Dispatch<React.SetStateAction<number>>;
   setInterest: React.Dispatch<React.SetStateAction<string>>;
   setSchoolYears: React.Dispatch<React.SetStateAction<string>>;
-  calculateMedianCosts: () => void;
   hasSelectedOccupation: boolean;
   setHasSelectedOccupation: React.Dispatch<React.SetStateAction<boolean>>;
   occupationSalary: number;
@@ -34,7 +32,6 @@ export default function SchoolCostForm({
   loan,
   interest,
   schoolYears,
-  showResults,
   formatCurrency,
   handleCurrencyInput,
   handleInterestInput,
@@ -43,7 +40,6 @@ export default function SchoolCostForm({
   setLoan,
   setInterest,
   setSchoolYears,
-  calculateMedianCosts,
   hasSelectedOccupation,
   setHasSelectedOccupation,
   occupationSalary,
@@ -87,7 +83,7 @@ export default function SchoolCostForm({
         className="flex items-center justify-between w-full"
         onClick={() => setShowOptionalForm(!showOptionalForm)}
       >
-        <span>Advanced Options</span>
+        <span>Fill in Your Details to Compare</span>
         {showOptionalForm ? <Minus size={16} /> : <Plus size={16} />}
       </Button>
 
@@ -113,12 +109,6 @@ export default function SchoolCostForm({
           setOccupationName={setOccupationName}
           InfoTooltip={InfoTooltip}
         />
-      )}
-
-      {!showResults && (
-        <Button onClick={calculateMedianCosts} className="w-full mt-2">
-          Calculate
-        </Button>
       )}
     </div>
   );
