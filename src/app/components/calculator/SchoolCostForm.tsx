@@ -1,9 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus } from "lucide-react";
 import OptionalForm from './OptionalForm';
 import * as CollegeConstants from '@/app/constants/college_related_constants';
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface SearchResult {
+  id: string;
+  name: string;
+  annual_salary: number;
+  category: {
+    name: string;
+    id: string;
+  }
+}
 
 interface SchoolCostFormProps {
   tuition: number,
@@ -49,6 +64,22 @@ export default function SchoolCostForm({
   InfoTooltip
 }: SchoolCostFormProps) {
   const [showOptionalForm, setShowOptionalForm] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [allOccupations, setAllOccupations] = useState<SearchResult[]>([]);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      const categoriesResponse = await fetch('/api/occupations/categories');
+      const categoriesData = await categoriesResponse.json();
+      setCategories(categoriesData);
+      
+      const occupationsResponse = await fetch('/api/occupations/subcategories');
+      const occupationsData = await occupationsResponse.json();
+      setAllOccupations(occupationsData);
+    };
+    
+    fetchData();
+  }, []);
 
   return (
     <div className="flex flex-col w-full gap-4">
@@ -107,6 +138,8 @@ export default function SchoolCostForm({
           setOccupationSalary={setOccupationSalary}
           occupationName={occupationName}
           setOccupationName={setOccupationName}
+          categories={categories}
+          allOccupations={allOccupations}
           InfoTooltip={InfoTooltip}
         />
       )}

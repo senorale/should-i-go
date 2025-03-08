@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -24,11 +24,12 @@ interface Occupation {
 }
 
 interface SearchResult {
-  id: string
-  name: string
-  annual_salary: number
+  id: string;
+  name: string;
+  annual_salary: number;
   category: {
-    name: string
+    name: string;
+    id: string;
   }
 }
 
@@ -38,6 +39,8 @@ interface OccupationSelectsProps {
   setHasSelectedOccupation: React.Dispatch<React.SetStateAction<boolean>>;
   setOccupationSalary: React.Dispatch<React.SetStateAction<number>>;
   setOccupationName: React.Dispatch<React.SetStateAction<string>>;
+  categories: Category[];
+  allOccupations: SearchResult[];
 }
 
 const occupationTooltipText = "Salary data comes from the U.S. Bureau of Labor Statistics (BLS). Note: The highest reported annual salary is capped at $239,200.";
@@ -47,38 +50,29 @@ export default function OccupationSelects({
   hasSelectedOccupation,
   setHasSelectedOccupation,
   setOccupationSalary,
-  setOccupationName
+  setOccupationName,
+  categories,
+  allOccupations
 }: OccupationSelectsProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [occupations, setOccupations] = useState<Occupation[]>([]);
+  const [filteredOccupations, setFilteredOccupations] = useState<Occupation[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedOccupation, setSelectedOccupation] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearchMode, setIsSearchMode] = useState(true)
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      const response = await fetch('/api/occupations/categories');
-      const data = await response.json();
-      setCategories(data);
-    };
-    fetchCategories();
-  }, []);
-
-  const handleCategoryChange = async (categoryId: string) => {
+  const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedOccupation('');
     setHasSelectedOccupation(false);
     
-    const response = await fetch(`/api/occupations/subcategories?categoryId=${categoryId}`);
-    const data = await response.json();
-    setOccupations(data);
+    const filtered = allOccupations.filter(occ => occ.category.id === categoryId);
+    setFilteredOccupations(filtered);
   };
 
   const handleOccupationChange = (occupationId: string) => {
     setSelectedOccupation(occupationId);
-    const occupation = occupations.find(occ => occ.id === occupationId);
+    const occupation = filteredOccupations.find(occ => occ.id === occupationId);
     if (occupation) {
       setOccupationSalary(occupation.annual_salary);
       setOccupationName(occupation.name);
@@ -86,15 +80,16 @@ export default function OccupationSelects({
     }
   };
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = (query: string) => {
     setSearchQuery(query)
     
     if (query.length >= 3) {
-      const response = await fetch(`/api/occupations/search?q=${encodeURIComponent(query)}`)
-      const data = await response.json()
-      setSearchResults(data)
+      const filteredResults = allOccupations.filter(occupation => 
+        occupation.name.toLowerCase().includes(query.toLowerCase())
+      );
+      setSearchResults(filteredResults);
     } else {
-      setSearchResults([])
+      setSearchResults([]);
     }
   }
 
@@ -116,12 +111,13 @@ export default function OccupationSelects({
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Label>Occupation</Label>
-          <InfoTooltip content={occupationTooltipText} 
-          footerLink='https://www.bls.gov/oes/tables.htm' 
+          <InfoTooltip 
+            content={occupationTooltipText} 
+            footerLink='https://www.bls.gov/oes/tables.htm' 
           />
         </div>
         <Button
@@ -140,7 +136,7 @@ export default function OccupationSelects({
 
       {isSearchMode ? (
         <div className="flex-1 mb-4 relative">
-          <div className="flex items-center mb-1">
+          <div className="mb-1">
             <Label htmlFor="search">Search Occupation</Label>
             {isSearchMode && hasSelectedOccupation && (
               <Button
@@ -154,26 +150,34 @@ export default function OccupationSelects({
               </Button>
             )}
           </div>
-          <Input
-            id="search"
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Enter at least 3 characters..."
-            className="w-full"
-          />
-          {searchResults.length > 0 && (
+          <div>
+            <Input
+              id="search"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Enter at least 3 characters..."
+              className="w-full"
+            />
+          </div>
+          {searchQuery.length >= 3 && !hasSelectedOccupation && (
             <Drawer onClose={() => setSearchResults([])}>
               <div className="max-h-[50vh] overflow-y-auto">
-                {searchResults.map((result) => (
-                  <button
-                    key={result.id}
-                    onClick={() => handleSearchResultSelect(result)}
-                    className="w-full px-4 py-3 text-left hover:bg-accent hover:text-accent-foreground border-b last:border-0"
-                  >
-                    <div className="font-medium">{result.name}</div>
-                    <div className="text-sm text-gray-500">{result.category.name}</div>
-                  </button>
-                ))}
+                {searchResults.length > 0 ? (
+                  searchResults.map((result) => (
+                    <button
+                      key={result.id}
+                      onClick={() => handleSearchResultSelect(result)}
+                      className="w-full px-4 py-3 text-left hover:bg-accent hover:text-accent-foreground border-b last:border-0"
+                    >
+                      <div className="font-medium">{result.name}</div>
+                      <div className="text-sm text-gray-500">{result.category.name}</div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-center text-gray-500">
+                    No results found for &quot;{searchQuery}&quot;
+                  </div>
+                )}
               </div>
             </Drawer>
           )}
@@ -181,45 +185,51 @@ export default function OccupationSelects({
       ) : (
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
-            <div className="flex items-center mb-1">
+            <div className="mb-1">
               <Label htmlFor="category">Occupation Category</Label>
             </div>
-            <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-              <SelectTrigger id="category" className={selectedCategory ? "w-[300px]" : ""}>
-                <div className="flex-1 text-left truncate">
-                  <SelectValue placeholder="Select a category" />
-                </div>
-              </SelectTrigger>
-              <SelectContent position="item-aligned" side="bottom">
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id} className="truncate">
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div>
+              <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                <SelectTrigger id="category" className={selectedCategory ? "w-[300px]" : ""}>
+                  <div className="flex-1 text-left truncate">
+                    <SelectValue placeholder="Select a category" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent position="item-aligned" side="bottom">
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id} className="truncate">
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex-1">
-            <Label htmlFor="occupation">Specific Occupation</Label>
-            <Select 
-              value={selectedOccupation} 
-              onValueChange={handleOccupationChange}
-              disabled={!selectedCategory}
-            >
-              <SelectTrigger id="occupation" className={selectedOccupation ? "w-[300px]" : ""}>
-                <div className="flex-1 text-left truncate">
-                  <SelectValue placeholder="Select an occupation" />
-                </div>
-              </SelectTrigger>
-              <SelectContent position="item-aligned" side="bottom">
-                {occupations.map((occupation) => (
-                  <SelectItem key={occupation.id} value={occupation.id} className="truncate">
-                    {occupation.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mb-1">
+              <Label htmlFor="occupation">Specific Occupation</Label>
+            </div>
+            <div>
+              <Select 
+                value={selectedOccupation} 
+                onValueChange={handleOccupationChange}
+                disabled={!selectedCategory}
+              >
+                <SelectTrigger id="occupation" className={selectedOccupation ? "w-[300px]" : ""}>
+                  <div className="flex-1 text-left truncate">
+                    <SelectValue placeholder="Select an occupation" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent position="item-aligned" side="bottom">
+                  {filteredOccupations.map((occupation) => (
+                    <SelectItem key={occupation.id} value={occupation.id} className="truncate">
+                      {occupation.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       )}

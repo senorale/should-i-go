@@ -5,28 +5,26 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url)
-    const categoryId = searchParams.get('categoryId')
-
-    if (!categoryId) {
-      return NextResponse.json({ error: 'Category ID is required' }, { status: 400 })
-    }
-
-    const subcategories = await prisma.occupationSubCategory.findMany({
-      where: {
-        category_id: categoryId,
-      },
+    // Always return all subcategories with their category information
+    const allSubcategories = await prisma.occupationSubCategory.findMany({
       select: {
         id: true,
         name: true,
         annual_salary: true,
+        category_id: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+          }
+        }
       },
       orderBy: {
         name: 'asc',
       },
     })
     
-    return NextResponse.json(subcategories)
+    return NextResponse.json(allSubcategories)
   } catch (error) {
     console.error('Error fetching subcategories:', error)
     return NextResponse.json({ error: 'Failed to fetch subcategories' }, { status: 500 })

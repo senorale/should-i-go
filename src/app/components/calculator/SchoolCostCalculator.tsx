@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { calculateTotalInterestPaid, calculateBreakEvenYears } from '../../utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card"
 import LifetimeEarnings from './LifeTimeEarnings';

@@ -3,6 +3,21 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import OccupationSelects from './OccupationSelect';
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface SearchResult {
+  id: string;
+  name: string;
+  annual_salary: number;
+  category: {
+    name: string;
+    id: string;
+  }
+}
+
 interface OptionalFormProps {
   tuition: number;
   loan: number;
@@ -23,6 +38,8 @@ interface OptionalFormProps {
   occupationName: string;
   setOccupationName: React.Dispatch<React.SetStateAction<string>>;
   InfoTooltip: React.ComponentType<{ content: string; footerLink?: string }>;
+  categories: Category[];
+  allOccupations: SearchResult[];
 }
 
 export default function OptionalForm({
@@ -44,7 +61,9 @@ export default function OptionalForm({
   setOccupationSalary,
   occupationName,
   setOccupationName,
-  InfoTooltip
+  InfoTooltip,
+  categories,
+  allOccupations,
 }: OptionalFormProps) {
   return (
     <div className="flex flex-col w-full gap-4">
@@ -55,6 +74,8 @@ export default function OptionalForm({
           setHasSelectedOccupation={setHasSelectedOccupation}
           setOccupationSalary={setOccupationSalary}
           setOccupationName={setOccupationName}
+          categories={categories}
+          allOccupations={allOccupations}
         />
         
         {hasSelectedOccupation && (
