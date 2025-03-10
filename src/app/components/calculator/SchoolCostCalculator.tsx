@@ -89,7 +89,7 @@ export default function SchoolCostCalculator() {
 
   const handleSchoolYearsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === '' || (/^\d+$/.test(value) && parseInt(value) > 0)) {
+    if (value === '' || (/^\d+$/.test(value) && parseInt(value) >= 0)) {
       setSchoolYears(value);
     }
   };
