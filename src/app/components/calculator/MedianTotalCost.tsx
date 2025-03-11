@@ -36,7 +36,12 @@ export default function MedianTotalCost({
       
       <div className="grid grid-cols-3 gap-4 mt-4">
         <div className="text-center">
-          <div className="text-sm text-muted-foreground">Total Tuition Cost</div>
+          <div className="text-sm text-muted-foreground">Total Tuition Cost
+          <InfoTooltip 
+              content="Finding a median or average tuition cost from a reliable, unbiased, & citable source has proven a difficult task. This number is completely arbitrary. If you think you have a source we can use, please reach out."
+              footerLink={"alejandrocarvajalt@outlook.com"}
+            />
+          </div>
           <div className="text-xl font-bold" style={{ color: COLORS[0] }}>
             ${roundedTuitionCost.toLocaleString()}
           </div>
