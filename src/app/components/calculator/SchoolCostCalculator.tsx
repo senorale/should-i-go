@@ -26,11 +26,11 @@ export default function SchoolCostCalculator() {
   const [occupationName, setOccupationName] = useState('');
   
   // Calculate median costs using constants
-  const medianInterestCost = parseFloat(calculateTotalInterestPaid(
-    CollegeConstants.MEDIAN_TOTAL_LOAN_AMOUNT, 
-    parseFloat(CollegeConstants.STUDENT_LOAN_INTEREST_RATE), 
+  const medianInterestCost = calculateTotalInterestPaid(
+    CollegeConstants.MEDIAN_TOTAL_LOAN_AMOUNT,
+    parseFloat(CollegeConstants.STUDENT_LOAN_INTEREST_RATE),
     10
-  ));
+  );
   
   const medianOpportunityCost = CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY * 
   parseFloat(CollegeConstants.BACHELOR_YEARS_IN_SCHOOL);
@@ -45,11 +45,11 @@ export default function SchoolCostCalculator() {
     CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY
   );
 
-  const specificInterestCost = parseFloat(calculateTotalInterestPaid(
-    loan, 
-    parseFloat(interest), 
+  const specificInterestCost = calculateTotalInterestPaid(
+    loan,
+    parseFloat(interest),
     10
-  ));
+  );
   const specificOpportunityCost = occupationSalary * 
       parseFloat(schoolYears);
   

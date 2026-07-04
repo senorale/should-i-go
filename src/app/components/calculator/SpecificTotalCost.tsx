@@ -24,11 +24,11 @@ export default function SpecificTotalCost({
   InfoTooltip
 }: SpecificTotalCostProps) {
   
-  const specificInterestCost = parseFloat(calculateTotalInterestPaid(
-    loan, 
-    parseFloat(interest || '0'), 
+  const specificInterestCost = calculateTotalInterestPaid(
+    loan,
+    parseFloat(interest || '0'),
     10
-  ));
+  );
   
   const specificOpportunityCost = CollegeConstants.HIGHSCHOOL_DIPLOMA_MEDIAN_SALARY * 
     parseFloat(schoolYears || '0');
