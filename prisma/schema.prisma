@@ -35,3 +35,20 @@ model OccupationSubCategory {
   @@unique([category_id, occupation_code])
   @@index([occupation_code])
 }
+
+// Median cost of attendance figures per school cohort, sourced from the
+// U.S. Dept. of Education College Scorecard. Values are ANNUAL; the app
+// multiplies by years in school to get a total. Public out-of-state has no
+// net price because the Scorecard only reports net price for in-state students.
+model TuitionMedian {
+  id                       String   @id @default(uuid())
+  cohort                   String   @unique // public_in_state | public_out_of_state | private_nonprofit | all
+  label                    String            // human label e.g. "Public (in-state)"
+  sticker_annual           Int?              // median tuition + fees, before aid
+  net_price_annual         Int?              // median cost of attendance minus grant aid
+  cost_of_attendance_annual Int?             // median full cost incl. living, before aid
+  sample_size              Int               // number of schools in the median
+  source                   String   @default("College Scorecard: Most-Recent-Cohorts-Institution")
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+}
