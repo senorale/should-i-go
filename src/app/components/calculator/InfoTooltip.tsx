@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { InfoIcon } from 'lucide-react';
 import {
@@ -10,9 +12,10 @@ import {
 interface InfoTooltipProps {
   content: string;
   footerLink?: string;
+  footerLinkText?: string;
 }
 
-export const InfoTooltip = ({ content, footerLink }: InfoTooltipProps) => {
+export const InfoTooltip = ({ content, footerLink, footerLinkText }: InfoTooltipProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -28,14 +31,13 @@ export const InfoTooltip = ({ content, footerLink }: InfoTooltipProps) => {
           <div>{content}</div>
           {footerLink && (
             <div className="mt-2 text-xs">
-              <a 
-                href={footerLink} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-blue-500 hover:underline" 
-                style={{textDecoration: 'underline', color: 'blue'}}
+              <a
+                href={footerLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
               >
-                {footerLink}
+                {footerLinkText || footerLink}
               </a>
             </div>
           )}
