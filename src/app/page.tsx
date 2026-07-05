@@ -123,17 +123,19 @@ export default async function Home() {
 
         {/* CTA to the tools */}
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-center">Now find your answer</h2>
+          <h2 className="text-xl font-semibold text-center">Want to learn more?</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <ToolCard
-              href="/schools"
+              href="https://collegescorecard.ed.gov/"
+              external
+              cta="Open Scorecard"
               title="Compare schools"
-              body="Not sure where to go? Search and compare up to 5 schools on graduation rate, average annual cost, and median earnings."
+              body="Compare schools based on graduation rate, average annual cost, and median earnings on the U.S. Dept. of Education College Scorecard."
             />
             <ToolCard
               href="/occupations"
               title="Compare occupations"
-              body="Already picked a school? Pick it once, then compare up to 5 careers to see which one pays off fastest."
+              body="See pay-off estimates for different occupations."
             />
           </div>
         </section>
@@ -177,23 +179,36 @@ function ToolCard({
   href,
   title,
   body,
+  external,
+  cta = 'Open',
 }: {
   href: string
   title: string
   body: string
+  external?: boolean
+  cta?: string
 }) {
-  return (
-    <Link
-      href={href}
-      className="flex flex-col rounded-lg border p-5 hover:border-primary hover:shadow-sm transition-colors"
-    >
+  const className =
+    'flex flex-col rounded-lg border p-5 hover:border-primary hover:shadow-sm transition-colors'
+  const inner = (
+    <>
       <span className="text-lg font-semibold">{title}</span>
       <span className="text-sm text-muted-foreground mt-1 flex-1">{body}</span>
       <span className="mt-3">
         <Button size="sm" className="pointer-events-none">
-          Open
+          {cta}
         </Button>
       </span>
+    </>
+  )
+
+  return external ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {inner}
+    </a>
+  ) : (
+    <Link href={href} className={className}>
+      {inner}
     </Link>
   )
 }
