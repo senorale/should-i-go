@@ -62,8 +62,7 @@ export default async function Home() {
         <CollapsibleCard title="The short answer" subtitle="Maybe">
           <div className="space-y-4 text-muted-foreground leading-relaxed text-pretty">
             <p>
-              <span className="font-semibold text-foreground">Maybe.</span> On the
-              national median, a bachelor&apos;s graduate earns about{' '}
+              On the national median, a bachelor&apos;s graduate earns about{' '}
               <span className="font-medium text-foreground">{money(GRAD_SALARY)}</span> a
               year, roughly{' '}
               <span className="font-medium text-foreground">
