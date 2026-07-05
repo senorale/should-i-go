@@ -34,7 +34,7 @@ const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`
 export default function MedianPayoffWidget() {
   const [medians, setMedians] = useState<TuitionMedian[]>([])
   const [cohort, setCohort] = useState('public_in_state')
-  const [metric, setMetric] = useState<Metric>('net')
+  const [metric, setMetric] = useState<Metric>('sticker')
   const [amountBorrowed, setAmountBorrowed] = useState(MEDIAN_STUDENT_DEBT)
   const [interestRate, setInterestRate] = useState(
     parseFloat(CollegeConstants.STUDENT_LOAN_INTEREST_RATE)
