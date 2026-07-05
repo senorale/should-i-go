@@ -15,6 +15,18 @@ export default function SchoolsPage() {
           annual cost, and median earnings, powered by the U.S. Department of Education
           College Scorecard.
         </p>
+        <p className="text-muted-foreground">
+          In the meantime, you can compare schools directly on the{' '}
+          <a
+            href="https://collegescorecard.ed.gov/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            College Scorecard
+          </a>
+          .
+        </p>
       </div>
     </main>
   )
