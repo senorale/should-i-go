@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -31,10 +31,10 @@ export default function CollapsibleCard({ title, subtitle, defaultOpen = false, 
             </span>
           )}
         </span>
-        <ChevronDown
+        <ChevronRight
           className={cn(
             'h-5 w-5 shrink-0 text-muted-foreground transition-transform',
-            open && 'rotate-180'
+            open && 'rotate-90'
           )}
         />
       </button>
