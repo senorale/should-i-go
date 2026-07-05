@@ -188,8 +188,7 @@ export default function CompareOccupations() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Prefilled with national medians — edit any of them to match your own
-                situation.
+                Prefilled with national medians. Edit any to match your situation.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Cost of school ($)" value={costOfSchool} onChange={setCostOfSchool} />
@@ -217,7 +216,7 @@ export default function CompareOccupations() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">
-                {mode === 'compare' ? 'Median annual salary' : 'Years to pay off'}
+                {mode === 'compare' ? 'National median annual salary' : 'Years to pay off'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

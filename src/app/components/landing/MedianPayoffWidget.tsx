@@ -103,7 +103,7 @@ export default function MedianPayoffWidget() {
         <div>
           <div className="flex items-center gap-1 text-sm font-medium mb-2">
             Cost basis
-            <InfoTooltip content="Sticker = published tuition + fees, before any aid. Net price = the full cost of attendance minus the average grant/scholarship aid — what students actually pay. Private schools show a high sticker but a much lower net price because of heavy scholarship discounting; public schools discount less." />
+            <InfoTooltip content="Sticker: tuition and fees before aid. Net price: total cost after average aid, what students actually pay." />
           </div>
           <div className="flex gap-2">
             <Button
@@ -123,8 +123,7 @@ export default function MedianPayoffWidget() {
           </div>
           {netUnavailable && (
             <p className="text-xs text-muted-foreground mt-2">
-              Net price isn&apos;t reported for out-of-state students — showing sticker
-              tuition instead.
+              No net price for out-of-state students; showing sticker instead.
             </p>
           )}
         </div>
@@ -134,7 +133,7 @@ export default function MedianPayoffWidget() {
           <div className="flex items-center justify-between text-sm font-medium mb-2">
             <span className="flex items-center gap-1">
               Amount borrowed
-              <InfoTooltip content="How much of the cost you finance with student loans. Defaults to the ~$39,000 median student-loan debt — most people borrow less than the full net price because aid, savings, and work cover part of it." />
+              <InfoTooltip content="How much you finance with loans. Defaults to the ~$39,000 national median debt; most people borrow less than the full cost." />
             </span>
             <span className="tabular-nums">{fmt(amountBorrowed)}</span>
           </div>
@@ -167,7 +166,7 @@ export default function MedianPayoffWidget() {
           <div className="flex items-center justify-between text-sm font-medium mb-2">
             <span className="flex items-center gap-1">
               Repayment plan
-              <InfoTooltip content="How many years you take to repay. Defaults to the ~20-year median — many borrowers take far longer than the 10-year standard plan. Longer terms lower your monthly payment but you pay more total interest; shorter terms pay less." />
+              <InfoTooltip content="Years to repay. Defaults to the ~20-year national median. Longer terms lower monthly payments but cost more total interest." />
             </span>
             <span className="tabular-nums">{termYears} years</span>
           </div>
@@ -198,8 +197,8 @@ export default function MedianPayoffWidget() {
             </div>
             <div className="text-center border-t pt-4">
               <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                Break-even point
-                <InfoTooltip content="How many years the higher median bachelor's salary takes to offset the total cost, versus going straight to work with a high-school diploma." />
+                Pay-off point
+                <InfoTooltip content="Years for the higher bachelor's salary to offset the total cost, versus a high-school diploma." />
               </div>
               <div className="text-xl font-bold">
                 {typeof totals.breakEven === 'number'
@@ -207,7 +206,7 @@ export default function MedianPayoffWidget() {
                   : 'N/A'}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
-                Based on the {fmt(GRAD_SALARY)} median bachelor&apos;s salary vs{' '}
+                Based on the {fmt(GRAD_SALARY)} national median bachelor&apos;s salary vs{' '}
                 {fmt(HS_SALARY)} with only a high-school diploma.
               </div>
             </div>

@@ -59,37 +59,32 @@ export default async function Home() {
         {/* Collapsible drawers */}
         <div className="space-y-3">
         {/* Thesis */}
-        <CollapsibleCard title="The short answer">
+        <CollapsibleCard title="The short answer" subtitle="Maybe">
           <div className="space-y-4 text-muted-foreground leading-relaxed text-pretty">
             <p>
-              <span className="font-semibold text-foreground">Maybe!</span> On the median,
-              a bachelor&apos;s graduate earns about{' '}
+              <span className="font-semibold text-foreground">Maybe.</span> On the
+              national median, a bachelor&apos;s graduate earns about{' '}
               <span className="font-medium text-foreground">{money(GRAD_SALARY)}</span> a
-              year — roughly{' '}
+              year, roughly{' '}
               <span className="font-medium text-foreground">
                 {headline ? money(headline.gap) : money(GRAD_SALARY - HS_SALARY)}
               </span>{' '}
-              more than the {money(HS_SALARY)} typical for someone with only a high-school
-              diploma.
+              more than the {money(HS_SALARY)} typical with only a high-school diploma.
             </p>
             <p>
               {headline?.breakEven != null && (
                 <>
-                  After tuition, loan interest, and the wages given up while studying, a
-                  typical 4-year degree pays for itself in about{' '}
+                  After tuition, interest, and lost wages, that degree pays for itself in
+                  about{' '}
                   <span className="font-medium text-foreground whitespace-nowrap">
                     {headline.breakEven} years
                   </span>
                   .{' '}
                 </>
               )}
-              But that&apos;s just the median — the details of{' '}
-              <span className="font-medium text-foreground">what you pay</span> and{' '}
-              <span className="font-medium text-foreground">
-                what your profession earns
-              </span>{' '}
-              can move that answer a lot. And college isn&apos;t the only path: many
-              well-paying careers — skilled trades and other roles filled through{' '}
+              But that&apos;s just the national median. What you pay and what your
+              profession earns move the answer a lot. College isn&apos;t the only path, either: skilled
+              trades and{' '}
               <a
                 href={APPRENTICESHIP_LINK}
                 target="_blank"
@@ -98,11 +93,11 @@ export default async function Home() {
               >
                 registered apprenticeships
               </a>{' '}
-              — pay you a wage while you learn, with little or no debt.
+              pay you while you learn, with little or no debt.
             </p>
             <p className="font-medium text-foreground">
-              This tool is here to help you make an informed decision — not to push you one
-              way or the other.
+              This tool is here to help you decide for yourself, not to push you one way or
+              the other.
             </p>
           </div>
         </CollapsibleCard>

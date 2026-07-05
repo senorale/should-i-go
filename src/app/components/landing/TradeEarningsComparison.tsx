@@ -87,7 +87,7 @@ export default function TradeEarningsComparison({ degreeCost }: Props) {
             <Tooltip
               formatter={((value: number, _name: string, entry: { payload?: { salary?: number; years?: number } }): [string, string] => [
                 `${full(value)} lifetime`,
-                `${full(entry?.payload?.salary ?? 0)}/yr median · ${entry?.payload?.years} working years`,
+                `${full(entry?.payload?.salary ?? 0)}/yr national median · ${entry?.payload?.years} working years`,
               ]) as never}
               labelFormatter={(label) => label}
               cursor={false}
@@ -101,12 +101,10 @@ export default function TradeEarningsComparison({ degreeCost }: Props) {
           </BarChart>
         </ResponsiveContainer>
         <p className="text-sm text-muted-foreground">
-          The path matters more than the diploma. Even after subtracting the cost of
-          school (not the total repaid on a loan), a bachelor&apos;s still leads on the
-          median — but a licensed electrician out-earns the typical high-school worker with
-          no degree and little or no debt, while a minimum-wage service job like a cashier
-          earns far less. &ldquo;No degree&rdquo; can mean very different things.
-          <InfoTooltip content="Total nominal earnings over a 45-year working life (median annual wage × years worked, not adjusted for inflation or raises). Electricians and cashiers start working right away, so they work the full 45 years; a bachelor's graduate starts 4 years later after finishing school. The bachelor's bar is shown net of the median cost of school itself (net price after aid) — not the total repaid on a loan, which would be higher after interest. Salaries: U.S. Bureau of Labor Statistics; cost: College Scorecard." />
+          The path matters more than the diploma. A licensed electrician out-earns the
+          typical high-school worker with no degree and little debt, while a cashier earns
+          far less. &ldquo;No degree&rdquo; can mean very different things.
+          <InfoTooltip content="National median wage over a 45-year career, not inflation-adjusted. The bachelor's starts 4 years later and is shown net of the cost of school (not loan interest). Wages: BLS. Cost: College Scorecard." />
         </p>
     </div>
   )
