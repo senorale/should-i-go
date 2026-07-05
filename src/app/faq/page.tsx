@@ -20,6 +20,20 @@ const faqs: { q: string; a: ReactNode }[] = [
     ),
   },
   {
+    q: 'Why do you use the median instead of the average?',
+    a: (
+      <>
+        The <span className="font-medium text-foreground">median</span> is the middle
+        value — half of people earn more and half earn less. The{' '}
+        <span className="font-medium text-foreground">average</span> (mean) gets pulled
+        upward by a small number of very high earners or very expensive schools, so it
+        overstates what a typical person actually experiences. Salaries and school costs
+        are skewed that way, so the median is the more honest picture of the &ldquo;typical&rdquo;
+        outcome — which is why every figure on this site is a median.
+      </>
+    ),
+  },
+  {
     q: 'Where does the data come from?',
     a: (
       <>
