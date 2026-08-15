@@ -59,7 +59,7 @@ export default async function Home() {
         {/* Collapsible drawers */}
         <div className="space-y-3">
         {/* Thesis */}
-        <CollapsibleCard title="The short answer" subtitle="Maybe">
+        <CollapsibleCard title="The short answer" subtitle="It depends">
           <div className="space-y-4 text-muted-foreground leading-relaxed text-pretty">
             <p>
               On the national median, a bachelor&apos;s graduate earns about{' '}
@@ -120,16 +120,16 @@ export default async function Home() {
           <h2 className="text-xl font-semibold text-center">Want to learn more?</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <ToolCard
+              href="/occupations"
+              title="Compare occupations"
+              body="See pay-off estimates for different occupations."
+            />
+            <ToolCard
               href="https://collegescorecard.ed.gov/"
               external
               cta="Open Scorecard"
               title="Compare schools"
               body="Compare schools based on graduation rate, average annual cost, and median earnings on the U.S. Dept. of Education College Scorecard."
-            />
-            <ToolCard
-              href="/occupations"
-              title="Compare occupations"
-              body="See pay-off estimates for different occupations."
             />
           </div>
         </section>

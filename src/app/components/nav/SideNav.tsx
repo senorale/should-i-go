@@ -15,8 +15,10 @@ import { cn } from '@/lib/utils'
 
 const links = [
   { href: '/', label: 'Home', icon: Home },
-  { href: '/schools', label: 'Compare Schools', icon: GraduationCap },
   { href: '/occupations', label: 'Compare Occupations', icon: Briefcase },
+  // '/schools' hidden until we build our own comparison. Landing page links
+  // out to the U.S. Dept. of Education College Scorecard in the meantime.
+  // { href: '/schools', label: 'Compare Schools', icon: GraduationCap },
   { href: '/faq', label: 'FAQ', icon: HelpCircle },
 ]
 
