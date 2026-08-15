@@ -96,7 +96,12 @@ export default function TradeEarningsComparison({ degreeCost }: Props) {
               {data.map((entry) => (
                 <Cell key={entry.name} fill={entry.color} />
               ))}
-              <LabelList dataKey="earnings" position="top" formatter={compact} className="text-xs" />
+              <LabelList
+                dataKey="earnings"
+                position="top"
+                formatter={(v) => compact(Number(v))}
+                className="text-xs"
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
