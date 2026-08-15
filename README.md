@@ -1,91 +1,115 @@
-# College Cost Calculator
+# Should I Go?
 
-This project provides a comprehensive college cost calculator. It helps users estimate the true cost of attending college by considering tuition, loans, interest rates, and opportunity costs. The big difference between this and other calculators
-is that we factor in opportunity cost and look at how long it would take for your education to be profitable. 
+A tool to help someone decide, on their own terms, whether college is worth it for them.
 
-## Features
+Beyond the sticker price, it factors in loan interest, opportunity cost (wages given up while in school), and expected post-degree earnings, then estimates how long the degree takes to pay for itself. It also surfaces non-degree paths (skilled trades, registered apprenticeships) so college is compared against real alternatives.
 
-- Calculate total college costs including tuition, loan interest, and opportunity cost
-- Visualize cost breakdown with an interactive pie chart
-- Estimate break-even point based on expected salary differences
+Live at [shouldigo.io](https://shouldigo.io).
 
+## What's in the app
 
-## Getting Started
+- **Landing page** with three collapsible cards:
+  - *The short answer* — one-paragraph summary computed from the national medians in the database.
+  - *Lifetime earnings comparison* — degree vs. trades earnings over a working life, factoring in years spent in school and degree cost.
+  - *When does it pay off?* — median payoff widget across school cohorts (public in-state, public out-of-state, private nonprofit, all).
+- **`/occupations`** — compare occupations using BLS wage data. Powered by the BLS Public Data API, proxied server-side so the API key stays on the server.
+- **`/faq`** — assumptions, formulas, and data sources.
+- **`/schools`** — placeholder for a Scorecard-powered school comparison; landing links out to the U.S. Dept. of Education College Scorecard in the meantime.
 
-To run this project locally:
+## Data sources
 
-1. Clone the repository:
+- **U.S. Dept. of Education College Scorecard** — `Most-Recent-Cohorts-Institution.csv`. Seeded into `TuitionMedian` by cohort (sticker price, net price, cost of attendance, sample size).
+- **U.S. Bureau of Labor Statistics** — occupation categories and median annual wages. Seeded into `OccupationCategory` / `OccupationSubCategory` from CSV, then queried live via the BLS API proxy at `/api/bls`.
+
+## Tech stack
+
+- Next.js 16 (App Router, Turbopack) + React 19
+- Prisma 6 + PostgreSQL (Neon in prod)
+- Tailwind + shadcn/ui (Radix primitives)
+- Recharts 3 for the charts
+
+## Getting started
+
+Prereqs: Node 20+, a PostgreSQL instance, and a BLS API registration key ([register here](https://www.bls.gov/developers/)).
+
+1. Clone and install:
    ```bash
    git clone https://github.com/mikebranc/should-i-go.git
    cd should-i-go
-   ```
-
-2. Install dependencies:
-   ```bash
    npm install
-   # or
-   yarn install
    ```
 
-3. Run the development server:
+2. Environment variables (`.env`):
+   ```bash
+   DATABASE_URL="postgresql://user:pass@host/db?sslmode=require"
+   BLS_API_KEY="your_bls_registration_key"
+   ```
+
+3. Generate the Prisma client and run migrations:
+   ```bash
+   npx prisma migrate dev
+   ```
+
+4. Seed the database:
+   ```bash
+   npm run create-db       # occupations from data/national_data.csv
+   npm run seed-tuition    # tuition medians from data/Most-Recent-Cohorts-Institution.csv
+   ```
+
+5. Start the dev server:
    ```bash
    npm run dev
-   # or
-   yarn dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.
+   Open [http://localhost:3000](http://localhost:3000).
 
-## Project Structure
+## The math
 
-The main components of this project are:
+### Breakeven
 
-- `src/app/components/CollegeCostCalculator.tsx`: The main component for the calculator UI and logic
-- `src/app/components/InfoTooltip.tsx`: A reusable tooltip component for providing additional information
-- `src/app/utils.ts`: Utility functions for calculations
+The breakeven point is where cumulative earnings with a degree (minus its cost) catch up to cumulative earnings without one.
 
-## Calculations and assumptions
-
-### Opportunity cost calculation
-Opportunity cost is calculated by multiplying your annual high school salary by the number of years spent in college.
-
-### Breakeven calculation
-The breakeven point is calculated by finding the intersection of two lines: one representing the cumulative earnings without a college degree, and another representing the cumulative earnings with a college degree minus the total cost of education. This can be modeled by the following equation:
-
+```
 t * H = t * C - (T + I + O)
+```
 
-Where:
-t = time (in years)
-H = annual salary with high school diploma
-C = annual salary with college degree
-T = total tuition cost
-I = total interest cost on student loans
-O = opportunity cost (Y * H), where Y is the number of years spent in college
+- `t` — years after finishing school
+- `H` — annual salary with a high-school diploma
+- `C` — annual salary with the degree
+- `T` — total tuition
+- `I` — total loan interest
+- `O` — opportunity cost (`Y * H`, where `Y` is years in school)
 
-Solving for t gives us the breakeven point in years:
+Solving for `t`:
 
+```
 t = (T + I + O) / (C - H)
+```
 
-This equation calculates how long it takes for the additional earnings from a college degree to offset the total cost of obtaining that degree.
+### Loan interest
 
-### Interest Calculation
+Standard daily simple interest on a 10-year term, matching the default federal repayment plan.
 
-The loan interest is calculated using the daily simple interest formula, which is commonly used for student loans. This method accrues interest daily based on the outstanding principal balance. We assume a 10 year loan which is pretty standard.
+### Opportunity cost
 
-For more detailed information on how student loan interest is calculated, please refer to these helpful links and calculators:
-- [Understanding Interest Rates for Federal Student Loans](https://studentaid.gov/understand-aid/types/loans/interest-rates)
-- [Bankrate - How to Calculate Sudent Loan Interest](https://www.bankrate.com/loans/student-loans/how-to-calculate-student-loan-interest/)
-- [Bankrate - Student Loan Calculator](https://www.bankrate.com/loans/student-loans/student-loan-calculator/)
-- [Forbes - Student Loan Calculator](https://www.forbes.com/advisor/student-loans/student-loan-calculator/)
+`years in school * annual salary you'd have earned with a high-school diploma`. Included in the total cost so the breakeven reflects real time-value, not just cash outlay.
+
+### National medians
+
+`H` and `C` default to national medians (BLS) via `src/app/constants/college_related_constants.ts`. Tuition figures come from College Scorecard medians, computed per cohort at seed time.
+
+## Available scripts
+
+| Script | Purpose |
+|---|---|
+| `npm run dev` | Next.js dev server (Turbopack) |
+| `npm run build` | Prisma generate + Next.js build |
+| `npm run start` | Serve the production build |
+| `npm run lint` | Next.js ESLint |
+| `npm run create-db` | Seed `OccupationCategory` / `OccupationSubCategory` from `data/national_data.csv` |
+| `npm run create-29` | Seed the 29 top-level occupation categories |
+| `npm run seed-tuition` | Compute and seed `TuitionMedian` rows from the Scorecard CSV |
 
 ## Disclaimer
 
-This tool is designed to help make more informed decisions about college costs. It provides estimates and should not be considered financial advice. Users should consult with financial professionals for personalized advice.
-
-## Learn More
-
-To learn more about the technologies used in this project:
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [React Documentation](https://reactjs.org/docs/getting-started.html)
-- [Recharts Library](https://recharts.org/en-US/)
+Estimates, not financial advice. The goal is to inform, not to sway. Talk to a financial professional for personalized guidance.
