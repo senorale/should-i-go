@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { GoogleAnalytics } from '@next/third-parties/google'
 import SideNav from "./components/nav/SideNav";
+import ChatToggle from "./components/chat/ChatToggle";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
         <div className="flex min-h-screen">
           <SideNav />
           <div className="min-w-0 flex-1">{children}</div>
+          <ChatToggle />
         </div>
       </body>
       <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID!} />

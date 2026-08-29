@@ -38,3 +38,5 @@ next-env.d.ts
 
 # Large source data (download from https://collegescorecard.ed.gov/data/)
 data/Most-Recent-Cohorts-Institution.csv
+api/venv/
+__pycache__/
