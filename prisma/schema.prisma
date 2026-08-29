@@ -25,15 +25,37 @@ model OccupationCategory {
 model OccupationSubCategory {
   id                  String             @id @default(uuid())
   name                String
-  occupation_code     String             
-  annual_salary       Float              
+  occupation_code     String
+  annual_salary       Float
   category           OccupationCategory @relation(fields: [category_id], references: [id])
-  category_id        String             
+  category_id        String
+  major_mappings     MajorOccupation[]
   created_at         DateTime           @default(now())
   updated_at         DateTime           @updatedAt
 
   @@unique([category_id, occupation_code])
   @@index([occupation_code])
+}
+
+model Major {
+  id          String            @id @default(uuid())
+  name        String            @unique
+  occupations MajorOccupation[]
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+}
+
+model MajorOccupation {
+  id            String               @id @default(uuid())
+  major         Major                @relation(fields: [major_id], references: [id])
+  major_id      String
+  occupation    OccupationSubCategory @relation(fields: [occupation_id], references: [id])
+  occupation_id String
+  relevance     Float                // 0-1, how likely this major leads to this occupation
+
+  @@unique([major_id, occupation_id])
+  @@index([major_id])
+  @@index([occupation_id])
 }
 
 // Median cost of attendance figures per school cohort, sourced from the

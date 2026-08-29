@@ -118,18 +118,23 @@ export default async function Home() {
         {/* CTA to the tools */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold text-center">Want to learn more?</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ToolCard
+              href="/majors"
+              title="Compare majors"
+              body="Choosing a major? Compare salaries and see if it pays off for different fields of study."
+            />
             <ToolCard
               href="/occupations"
               title="Compare occupations"
-              body="See pay-off estimates for different occupations."
+              body="Already committed to your major? Compare occupation salaries."
             />
             <ToolCard
               href="https://collegescorecard.ed.gov/"
               external
               cta="Open Scorecard"
               title="Compare schools"
-              body="Compare schools based on graduation rate, average annual cost, and median earnings on the U.S. Dept. of Education College Scorecard."
+              body="Pick a school on the U.S. Dept. of Education College Scorecard: graduation rates, costs, and earnings."
             />
           </div>
         </section>
