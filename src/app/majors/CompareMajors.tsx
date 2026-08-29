@@ -96,6 +96,7 @@ export default function CompareMajors() {
   const addMajor = (m: Major) => {
     if (selected.length < MAX_MAJORS) {
       setSelected((prev) => [...prev, m])
+      setExpanded((prev) => ({ ...prev, [m.id]: true }))
       setQuery('')
     }
   }
