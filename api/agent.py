@@ -125,7 +125,7 @@ def run_agent(user_message: str, conversation_history: list[dict] | None = None)
             # We need to execute each tool and send results back.
 
             # Add Claude's response (with tool_use blocks) to history
-            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "assistant", "content": [b.model_dump() for b in response.content]})
 
             # Execute each tool call and collect results
             tool_results = []
@@ -166,7 +166,7 @@ def run_agent(user_message: str, conversation_history: list[dict] | None = None)
                 if hasattr(block, "text"):
                     text_response += block.text
 
-            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "assistant", "content": [b.model_dump() for b in response.content]})
 
             return {
                 "response": text_response,
