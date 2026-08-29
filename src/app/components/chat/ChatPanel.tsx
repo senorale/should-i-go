@@ -13,6 +13,18 @@ interface Message {
 const STORAGE_KEY_MESSAGES = 'advisor-messages'
 const STORAGE_KEY_HISTORY = 'advisor-conversation-history'
 
+const WELCOME_MESSAGE: Message = {
+  role: 'assistant',
+  content: `Hey there! Welcome to Should I Go? I'm here to help you explore college majors and compare them based on career outcomes and salaries.
+
+Here's what I can help you with:
+
+- Search for a major and see what careers it typically leads to, along with median salaries from the Bureau of Labor Statistics
+- Compare multiple majors to help you decide which path might be right for you
+- Get information about tuition costs across different school types
+What would you like to explore? Are you thinking about a specific major, or do you want to compare a few different career paths?`,
+}
+
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
     const stored = localStorage.getItem(key)
@@ -30,7 +42,7 @@ export default function ChatPanel({
   onClose: () => void
 }) {
   const [messages, setMessages] = useState<Message[]>(() =>
-    loadFromStorage(STORAGE_KEY_MESSAGES, [])
+    loadFromStorage(STORAGE_KEY_MESSAGES, [WELCOME_MESSAGE])
   )
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -53,9 +65,8 @@ export default function ChatPanel({
   }, [open])
 
   const handleNewConversation = useCallback(() => {
-    setMessages([])
+    setMessages([WELCOME_MESSAGE])
     conversationHistoryRef.current = []
-    localStorage.removeItem(STORAGE_KEY_MESSAGES)
     localStorage.removeItem(STORAGE_KEY_HISTORY)
     inputRef.current?.focus()
   }, [])
@@ -131,17 +142,6 @@ export default function ChatPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {messages.length === 0 && (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <p className="text-sm font-medium">What would you like to know?</p>
-              <p className="mt-1 text-xs">
-                Try &quot;What careers can I get with a CS degree?&quot;
-              </p>
-            </div>
-          </div>
-        )}
-
         <div className="space-y-3">
           {messages.map((msg, i) => (
             <div
