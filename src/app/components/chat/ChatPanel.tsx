@@ -10,7 +10,6 @@ interface Message {
   content: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_AGENT_API_URL || 'http://localhost:8000'
 const STORAGE_KEY_MESSAGES = 'advisor-messages'
 const STORAGE_KEY_HISTORY = 'advisor-conversation-history'
 
@@ -71,7 +70,7 @@ export default function ChatPanel({
     setLoading(true)
 
     try {
-      const res = await fetch(`${API_URL}/chat`, {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
