@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, FormEvent } from 'react'
 import { Send, X, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { WELCOME_TEXT } from './welcome-message'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -13,17 +14,7 @@ interface Message {
 const STORAGE_KEY_MESSAGES = 'advisor-messages'
 const STORAGE_KEY_HISTORY = 'advisor-conversation-history'
 
-const WELCOME_MESSAGE: Message = {
-  role: 'assistant',
-  content: `Hey there! Welcome to Should I Go? I'm here to help you explore college majors and compare them based on career outcomes and salaries.
-
-Here's what I can help you with:
-
-- Search for a major and see what careers it typically leads to, along with median salaries from the Bureau of Labor Statistics
-- Compare multiple majors to help you decide which path might be right for you
-- Get information about tuition costs across different school types
-What would you like to explore? Are you thinking about a specific major, or do you want to compare a few different career paths?`,
-}
+const WELCOME_MESSAGE: Message = { role: 'assistant', content: WELCOME_TEXT }
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
