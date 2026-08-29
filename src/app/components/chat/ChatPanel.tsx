@@ -32,16 +32,21 @@ export default function ChatPanel({
   open: boolean
   onClose: () => void
 }) {
-  const [messages, setMessages] = useState<Message[]>(() =>
-    loadFromStorage(STORAGE_KEY_MESSAGES, [WELCOME_MESSAGE])
-  )
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const conversationHistoryRef = useRef<Record<string, unknown>[]>(
-    loadFromStorage(STORAGE_KEY_HISTORY, [])
-  )
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const conversationHistoryRef = useRef<Record<string, unknown>[]>([])
+  const hydratedRef = useRef(false)
+
+  useEffect(() => {
+    if (hydratedRef.current) return
+    hydratedRef.current = true
+    const stored = loadFromStorage<Message[]>(STORAGE_KEY_MESSAGES, [])
+    if (stored.length > 0) setMessages(stored)
+    conversationHistoryRef.current = loadFromStorage(STORAGE_KEY_HISTORY, [])
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages))
@@ -68,6 +73,7 @@ export default function ChatPanel({
     if (!text || loading) return
 
     setInput('')
+    if (inputRef.current) inputRef.current.style.height = 'auto'
     setMessages((prev) => [...prev, { role: 'user', content: text }])
     setLoading(true)
 
@@ -170,20 +176,30 @@ export default function ChatPanel({
       </div>
 
       <form onSubmit={handleSubmit} className="border-t px-4 py-3">
-        <div className="flex gap-2">
-          <input
+        <div className="flex items-end gap-2">
+          <textarea
             ref={inputRef}
-            type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSubmit(e)
+              }
+            }}
             placeholder="Ask about a major or career..."
             disabled={loading}
-            className="flex h-9 flex-1 rounded-md border border-input bg-white px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            rows={1}
+            className="flex min-h-9 max-h-[120px] flex-1 resize-none rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           />
           <Button
             type="submit"
             size="icon"
-            className="h-9 w-9"
+            className="h-9 w-9 shrink-0"
             disabled={loading || !input.trim()}
           >
             <Send className="h-4 w-4" />
