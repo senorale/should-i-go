@@ -32,7 +32,7 @@ MODEL = "claude-haiku-4-5-20251001"
 TOOLS = [
     {
         "name": "find_majors",
-        "description": "Search college majors by name and get all linked occupations with annual salaries and relevance scores in one call. Relevance: 1.0 = direct pipeline, 0.7 = common path, 0.4 = possible path. Salary data is from BLS May 2024. BLS caps reported salaries at $239,200/yr.",
+        "description": "Search college majors by name and get all linked occupations with annual salaries and relevance scores in one call. Each result includes a major_id (UUID) you can use to build comparison links. Relevance: 1.0 = direct pipeline, 0.7 = common path, 0.4 = possible path. Salary data is from BLS May 2024. BLS caps reported salaries at $239,200/yr.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -80,15 +80,19 @@ When a user asks about a career or job title that doesn't match our data:
 
 Be conversational and ask follow-up questions to help the user think through their decision:
 - If a career path doesn't require a college degree (trades, certifications), ask the user about their expected licensing or training costs so you can help them compare
-- Ask about their location, since salaries vary significantly by region
-- Ask what factors matter most to them beyond salary (job satisfaction, work-life balance, job growth outlook)
-- If they seem undecided, ask what subjects they enjoy or what kind of work environment they prefer
 
 Formatting rules:
 - Respond in plain text only. No markdown, no tables, no headers, no bold/italic.
 - Use line breaks and short paragraphs to organize information.
 - For lists of occupations and salaries, use simple dashes and keep it readable.
 - Keep responses concise and conversational.
+- Keep responses SHORT. Prefer 2-4 sentences plus a link over a wall of text. If an answer would take more than a short paragraph, summarize the key takeaway and link the user to the right page instead.
+
+CRITICAL: When a user mentions a major by name, you MUST call find_majors first to get the major_id before responding. Never skip the tool call. Never generate a /compare link without a real major_id from find_majors results.
+
+After calling find_majors, always include a link to the Degree Payoff Comparison: /compare?majorId=UUID (using the major_id from find_majors results). Say something like "Instead of hitting you with a wall of numbers, I set up a visual comparison for you" and put the link on its own line. The calculator loads real tuition and salary data and lets users adjust everything interactively. Never try to replicate the calculator's output in chat. Give the user the one or two most important numbers (e.g. weighted average salary, top occupation) and let the calculator handle the rest.
+
+When users ask about loan repayment, costs, ROI, payoff time, or anything that would produce a long numerical breakdown, do NOT write it out. Call find_majors to get the major_id, give a one-sentence summary, and link them to the calculator.
 
 Important notes:
 - BLS caps reported salaries at $239,200/yr, so some occupations (surgeons, physicians) earn more than shown

@@ -12,7 +12,8 @@ def find_majors_with_occupations(query: str) -> list[dict]:
     with engine.connect() as conn:
         rows = conn.execute(
             text("""
-                SELECT m.name AS major,
+                SELECT m.id AS major_id,
+                       m.name AS major,
                        o.name AS occupation,
                        o.annual_salary,
                        mo.relevance
@@ -30,7 +31,7 @@ def find_majors_with_occupations(query: str) -> list[dict]:
     for row in flat:
         major = row["major"]
         if major not in grouped:
-            grouped[major] = {"major": major, "occupations": []}
+            grouped[major] = {"major_id": row["major_id"], "major": major, "occupations": []}
         grouped[major]["occupations"].append({
             "occupation": row["occupation"],
             "annual_salary": float(row["annual_salary"]),
