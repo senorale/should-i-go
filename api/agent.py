@@ -11,7 +11,12 @@ How it works:
 5. This loop continues until Claude produces a final text response.
 """
 
+import asyncio
 import json
+import logging
+from datetime import date, datetime
+from decimal import Decimal
+from uuid import UUID
 from dotenv import load_dotenv
 load_dotenv(dotenv_path="../.env")
 
@@ -21,8 +26,71 @@ from db import (
     get_tuition_medians,
 )
 
-client = anthropic.Anthropic()
+logger = logging.getLogger(__name__)
+
+client = anthropic.AsyncAnthropic()
 MODEL = "claude-haiku-4-5-20251001"
+
+# Cap agent loop so a misbehaving model can't spin forever.
+# 8 = enough for realistic multi-tool trajectories, small enough that
+# a runaway loop stops fast and cheap.
+MAX_TOOL_ITERATIONS = 8
+
+# One retry on transient API failure (network blip, 5xx, rate limit).
+# More than one retry hides real outages behind long user-facing waits.
+MAX_API_RETRIES = 1
+RETRY_BACKOFF_SECONDS = 2
+
+# Cap conversation history to keep prompt size + cost bounded.
+# 40 = ~20 user/assistant pairs, plenty for a session but stops runaway growth.
+MAX_HISTORY_MESSAGES = 40
+
+
+def _json_default(obj):
+    """Explicit JSON coercion for known non-JSON types. Raises on anything else
+    so unexpected schema drift is loud instead of silently stringified."""
+    if isinstance(obj, (UUID, Decimal)):
+        return str(obj)
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
+def _trim_history(messages: list[dict]) -> list[dict]:
+    """Keep the last MAX_HISTORY_MESSAGES, but never start on a dangling
+    tool_result or assistant tool_use — Anthropic requires tool_use/tool_result
+    to be paired, so drop leading fragments until the first message is a
+    plain user text turn."""
+    if len(messages) <= MAX_HISTORY_MESSAGES:
+        return messages
+    trimmed = messages[-MAX_HISTORY_MESSAGES:]
+    while trimmed:
+        first = trimmed[0]
+        content = first.get("content")
+        is_tool_result = (
+            first["role"] == "user"
+            and isinstance(content, list)
+            and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content)
+        )
+        is_assistant_fragment = first["role"] == "assistant"
+        if is_tool_result or is_assistant_fragment:
+            trimmed = trimmed[1:]
+        else:
+            break
+    return trimmed
+
+
+def _retry_delay_for(exc: Exception) -> float:
+    """Honor Anthropic's retry-after header on 429/5xx when present."""
+    response = getattr(exc, "response", None)
+    if response is not None:
+        header = response.headers.get("retry-after")
+        if header:
+            try:
+                return float(header)
+            except ValueError:
+                pass
+    return RETRY_BACKOFF_SECONDS
 
 # --- Tool definitions ---
 # Each tool is a JSON schema describing what the function does, its parameters,
@@ -101,26 +169,59 @@ Important notes:
 """
 
 
-def run_agent(user_message: str, conversation_history: list[dict] | None = None) -> dict:
+async def _call_claude(messages: list[dict]):
+    """
+    Call the Claude API with one retry on transient errors.
+    Retriable: rate limit, connection error, 5xx. Non-retriable errors
+    (auth, bad request) surface immediately so the caller sees the real cause.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(MAX_API_RETRIES + 1):
+        try:
+            return await client.messages.create(
+                model=MODEL,
+                max_tokens=1024,
+                system=SYSTEM_PROMPT,
+                tools=TOOLS,
+                messages=messages,
+            )
+        except (anthropic.APIConnectionError, anthropic.RateLimitError) as exc:
+            last_exc = exc
+            logger.warning("Anthropic transient error (attempt %d): %s", attempt + 1, exc)
+        except anthropic.APIStatusError as exc:
+            if exc.status_code and 500 <= exc.status_code < 600:
+                last_exc = exc
+                logger.warning("Anthropic 5xx (attempt %d): %s", attempt + 1, exc)
+            else:
+                raise
+        if attempt < MAX_API_RETRIES:
+            await asyncio.sleep(_retry_delay_for(last_exc))
+    if last_exc is None:
+        raise RuntimeError("_call_claude exited retry loop without a response or exception")
+    raise last_exc
+
+
+async def run_agent(user_message: str, conversation_history: list[dict] | None = None) -> dict:
     """
     Run the agent loop:
     1. Send user message + tools to Claude
     2. If Claude wants to use a tool, execute it and send result back
-    3. Repeat until Claude gives a final text response
+    3. Repeat until Claude gives a final text response OR MAX_TOOL_ITERATIONS hit
     4. Return the response and updated conversation history
     """
     messages = list(conversation_history) if conversation_history else []
     messages.append({"role": "user", "content": user_message})
+    messages = _trim_history(messages)
 
-    while True:
-        # Call Claude with our tools
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=1024,
-            system=SYSTEM_PROMPT,
-            tools=TOOLS,
-            messages=messages,
-        )
+    for _ in range(MAX_TOOL_ITERATIONS):
+        try:
+            response = await _call_claude(messages)
+        except anthropic.APIError as exc:
+            logger.error("Anthropic API failed after retries: %s", exc)
+            return {
+                "response": "Sorry, I'm having trouble reaching my brain right now. Please try again in a moment.",
+                "conversation_history": messages,
+            }
 
         # Check if Claude wants to use tools or is done
         if response.stop_reason == "tool_use":
@@ -141,21 +242,36 @@ def run_agent(user_message: str, conversation_history: list[dict] | None = None)
 
                     # Look up and execute the tool
                     func = TOOL_DISPATCH.get(tool_name)
-                    if func:
-                        result = func(tool_input)
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": tool_id,
-                                "content": json.dumps(result, default=str),
-                            }
-                        )
-                    else:
+                    if not func:
                         tool_results.append(
                             {
                                 "type": "tool_result",
                                 "tool_use_id": tool_id,
                                 "content": f"Error: unknown tool '{tool_name}'",
+                                "is_error": True,
+                            }
+                        )
+                        continue
+
+                    try:
+                        # Run sync DB call in a thread so it doesn't block the event loop.
+                        result = await asyncio.to_thread(func, tool_input)
+                        tool_results.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": tool_id,
+                                "content": json.dumps(result, default=_json_default),
+                            }
+                        )
+                    except Exception as exc:
+                        # Return the failure to Claude as a tool_result error so it
+                        # can recover or explain, instead of 500ing the whole request.
+                        logger.exception("Tool %s failed", tool_name)
+                        tool_results.append(
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": tool_id,
+                                "content": f"Error executing {tool_name}: {exc}",
                                 "is_error": True,
                             }
                         )
@@ -165,10 +281,9 @@ def run_agent(user_message: str, conversation_history: list[dict] | None = None)
 
         else:
             # Claude is done (stop_reason == "end_turn"). Extract text response.
-            text_response = ""
-            for block in response.content:
-                if hasattr(block, "text"):
-                    text_response += block.text
+            text_response = "".join(
+                block.text for block in response.content if block.type == "text"
+            )
 
             messages.append({"role": "assistant", "content": [b.model_dump() for b in response.content]})
 
@@ -176,3 +291,9 @@ def run_agent(user_message: str, conversation_history: list[dict] | None = None)
                 "response": text_response,
                 "conversation_history": messages,
             }
+
+    logger.warning("Agent hit MAX_TOOL_ITERATIONS=%d without finishing", MAX_TOOL_ITERATIONS)
+    return {
+        "response": "I got stuck working through that. Try rephrasing your question or asking something simpler.",
+        "conversation_history": messages,
+    }

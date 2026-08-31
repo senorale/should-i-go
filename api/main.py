@@ -29,8 +29,8 @@ def health():
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
-    result = run_agent(req.message, req.conversation_history)
+async def chat(req: ChatRequest):
+    result = await run_agent(req.message, req.conversation_history)
     return ChatResponse(
         response=result["response"],
         conversation_history=result["conversation_history"],
