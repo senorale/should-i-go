@@ -40,3 +40,4 @@ next-env.d.ts
 data/Most-Recent-Cohorts-Institution.csv
 api/venv/
 __pycache__/
+evals/results/
