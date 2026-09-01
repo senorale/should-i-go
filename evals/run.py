@@ -23,6 +23,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from agent import run_agent
 from evals.scorers import score
 from evals.judges import run_all_judges
+from evals.db_wait import wait_for_db
 
 
 DATASET_PATH = Path(__file__).resolve().parent / "dataset.jsonl"
@@ -154,6 +155,7 @@ async def main():
 
     previous = load_results_file(BASELINE_PATH)
 
+    wait_for_db()
     print(f"Running {len(dataset)} eval(s)...\n")
 
     results = []
