@@ -29,6 +29,7 @@ model OccupationSubCategory {
   annual_salary       Float
   category           OccupationCategory @relation(fields: [category_id], references: [id])
   category_id        String
+  typical_years_of_school Float?
   major_mappings     MajorOccupation[]
   created_at         DateTime           @default(now())
   updated_at         DateTime           @updatedAt
