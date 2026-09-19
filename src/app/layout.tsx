@@ -4,7 +4,6 @@ import "./globals.css";
 import { GoogleAnalytics } from '@next/third-parties/google'
 import SideNav from "./components/nav/SideNav";
 import Footer from "./components/nav/Footer";
-import ChatToggle from "./components/chat/ChatToggle";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,7 +24,7 @@ export default function RootLayout({
           <div className="flex flex-1">
             <SideNav />
             <div className="min-w-0 flex-1">{children}</div>
-            <ChatToggle />
+
           </div>
           <Footer />
         </div>
