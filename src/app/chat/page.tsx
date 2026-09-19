@@ -124,17 +124,6 @@ const PRIORITY_STEP: IntakeStep = {
   placeholder: "Or tell me what matters most...",
 }
 
-const FINANCES_DEEP_DIVE_STEP: IntakeStep = {
-  key: 'finances_deep_dive',
-  question: "Want a detailed financial breakdown?",
-  subtitle: "I can walk through total debt, interest rates, repayment plans, monthly payments, and how they all affect the true cost of a degree.",
-  options: [
-    "Yes, walk me through the full financial picture",
-    "No, just the big numbers",
-  ],
-  placeholder: "Or tell me what financial details you care about...",
-}
-
 const CAREER_PRIORITY_STEP: IntakeStep = {
   key: 'career_priority',
   question: "What matters most to you right now?",
@@ -225,15 +214,14 @@ function getNextStep(answers: Record<string, string>): IntakeStep | null {
     const approach = answers.school_approach?.toLowerCase() ?? ''
     if (approach.includes('schools i want to compare') && !keys.includes('target_schools')) return TARGET_SCHOOLS_STEP
     if (approach.includes('specific state') && !keys.includes('target_state')) return TARGET_STATE_STEP
-    const wantsSchoolSearch = !approach.includes('general')
-    if (wantsSchoolSearch && !keys.includes('school_type')) return SCHOOL_TYPE_STEP
-    if (wantsSchoolSearch && !keys.includes('school_size')) return SCHOOL_SIZE_STEP
-    if (wantsSchoolSearch && !keys.includes('budget')) return BUDGET_STEP
-    if (wantsSchoolSearch && !keys.includes('sort_preference')) return SORT_PREFERENCE_STEP
+    const wantsStateSearch = approach.includes('specific state')
+    if (wantsStateSearch && !keys.includes('school_type')) return SCHOOL_TYPE_STEP
+    if (wantsStateSearch && !keys.includes('school_size')) return SCHOOL_SIZE_STEP
+    if (wantsStateSearch && !keys.includes('budget')) return BUDGET_STEP
+    if (wantsStateSearch && !keys.includes('sort_preference')) return SORT_PREFERENCE_STEP
     if (!keys.includes('interests')) return INTERESTS_STEP
     if (!keys.includes('trade_interest')) return TRADE_INTEREST_STEP
     if (!keys.includes('priority')) return PRIORITY_STEP
-    if (!keys.includes('finances_deep_dive')) return FINANCES_DEEP_DIVE_STEP
     return null
   }
 
@@ -254,7 +242,6 @@ function getNextStep(answers: Record<string, string>): IntakeStep | null {
     const stayingInField = answers.career_direction?.toLowerCase().includes('in my field')
     if (!stayingInField && !keys.includes('interests')) return INTERESTS_STEP
     if (!keys.includes('career_priority')) return CAREER_PRIORITY_STEP
-    if (hasDegree && !keys.includes('finances_deep_dive')) return FINANCES_DEEP_DIVE_STEP
     return null
   }
 
@@ -273,13 +260,14 @@ function estimateTotalSteps(answers: Record<string, string>): number {
     const hasDegree = answers.has_degree?.toLowerCase().startsWith('yes')
     if (!hasDegree) return 4
     const stayingInField = answers.career_direction?.toLowerCase().includes('in my field')
-    return stayingInField ? 6 : 7
+    return stayingInField ? 5 : 6
   }
 
   if (segment.includes('considering whether')) {
     const approach = answers.school_approach?.toLowerCase() ?? ''
     if (approach.includes('general')) return 5
-    return 10
+    if (approach.includes('specific state')) return 10
+    return 6
   }
   return 5
 }
@@ -761,8 +749,7 @@ function buildPrompt(answers: Record<string, string>): string {
   if (answers.trade_interest) lines.push(`- College alternatives: ${answers.trade_interest}`)
   if (answers.interests) lines.push(`- Fields that interest me: ${answers.interests}`)
   if (answers.priority) lines.push(`- What matters most: ${answers.priority}`)
-  if (answers.career_priority) lines.push(`- What matters most: ${answers.career_priority}`)
-  if (answers.finances_deep_dive) lines.push(`- Financial detail level: ${answers.finances_deep_dive}`)
+  if (answers.career_priority) lines.push(`- Career priority: ${answers.career_priority}`)
 
   lines.push('')
   lines.push('Based on all of this, give me personalized advice.')

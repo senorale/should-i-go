@@ -279,7 +279,7 @@ Considering college:
 - search_schools when they name schools or a state (use their school_type, budget, size, sort preferences as filters)
 - find_majors for each field of interest
 - get_school_programs for their target schools + majors
-- run_sql for break-even analysis, occupations with low typical_years_of_school
+- run_sql for occupations with low typical_years_of_school
 
 In college:
 - find_majors for current major AND any alternatives mentioned
@@ -297,7 +297,6 @@ RULES:
 - When a user mentions a major, call find_majors. When they name a school, call search_schools.
 - To get program earnings, call search_schools first (for school_id), then get_school_programs.
 - If find_majors returns no results, try broader search terms.
-- For finances deep dive: use run_sql for break-even calculations, debt projections.
 - BLS caps reported salaries at $239,200/yr.
 
 RESPONSE:
