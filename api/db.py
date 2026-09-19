@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 import requests
 from sqlalchemy import create_engine, text
@@ -74,6 +75,33 @@ def _backfill_years(occupation_code: str) -> float | None:
             {"years": years, "code": occupation_code},
         )
     return years
+
+
+MAX_SQL_ROWS = 50
+
+_SELECT_ONLY_RE = re.compile(
+    r"^\s*SELECT\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
+_FORBIDDEN_RE = re.compile(
+    r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|GRANT|REVOKE|COPY)\b",
+    re.IGNORECASE,
+)
+
+
+def run_sql(query: str) -> list[dict]:
+    """Execute a read-only SQL query. Only SELECT statements allowed."""
+    if not _SELECT_ONLY_RE.match(query):
+        raise ValueError("Only SELECT statements are allowed.")
+    if _FORBIDDEN_RE.search(query):
+        raise ValueError("Write operations are not allowed.")
+    with engine.connect() as conn:
+        rows = conn.execute(text(query))
+        results = [dict(r._mapping) for r in rows]
+    if len(results) > MAX_SQL_ROWS:
+        return results[:MAX_SQL_ROWS]
+    return results
 
 
 def find_majors_with_occupations(query: str) -> list[dict]:

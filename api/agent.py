@@ -24,6 +24,7 @@ import anthropic
 from db import (
     find_majors_with_occupations,
     get_tuition_medians,
+    run_sql,
 )
 
 logger = logging.getLogger(__name__)
@@ -121,12 +122,44 @@ TOOLS = [
             "required": [],
         },
     },
+    {
+        "name": "run_sql",
+        "description": """Run a read-only SQL SELECT query against the database. Only SELECT statements are allowed. Results are capped at 50 rows.
+
+Database schema (PostgreSQL, all table/column names are double-quoted):
+
+"Major" (id UUID PK, name TEXT UNIQUE, created_at, updated_at)
+  Sample: id='abc-123', name='Computer Science'
+
+"OccupationCategory" (id UUID PK, name TEXT UNIQUE, occupation_code TEXT UNIQUE, created_at, updated_at)
+  Sample: id='def-456', name='Computer and Mathematical Occupations', occupation_code='15-0000'
+
+"OccupationSubCategory" (id UUID PK, name TEXT, occupation_code TEXT, annual_salary FLOAT, category_id UUID FK->OccupationCategory.id, typical_years_of_school FLOAT NULL, created_at, updated_at)
+  Sample: id='ghi-789', name='Software Developers', occupation_code='15-1252', annual_salary=132270.0, typical_years_of_school=4.0
+
+"MajorOccupation" (id UUID PK, major_id UUID FK->Major.id, occupation_id UUID FK->OccupationSubCategory.id, relevance FLOAT)
+  Links majors to occupations. relevance: 1.0=direct pipeline, 0.7=common path, 0.4=possible path
+
+"TuitionMedian" (id UUID PK, cohort TEXT UNIQUE, label TEXT, sticker_annual INT NULL, net_price_annual INT NULL, cost_of_attendance_annual INT NULL, sample_size INT, source TEXT, created_at, updated_at)
+  Cohorts: public_in_state, public_out_of_state, private_nonprofit, all""",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "A SQL SELECT query to run against the database",
+                }
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 # Maps tool names to the actual Python functions
 TOOL_DISPATCH = {
     "find_majors": lambda args: find_majors_with_occupations(args["query"]),
     "get_tuition_medians": lambda _args: get_tuition_medians(),
+    "run_sql": lambda args: run_sql(args["query"]),
 }
 
 SYSTEM_PROMPT = """You are a helpful college advisor agent for the "Should I Go?" app.
@@ -138,6 +171,8 @@ When a user asks about a major or career:
 3. Always mention that salary data comes from the Bureau of Labor Statistics (BLS) May 2024 Occupational Employment and Wage Statistics
 
 When comparing majors, you can search for multiple in one call (e.g. "engineering" returns all engineering majors) or make separate calls.
+
+For questions that the other tools can't answer, use run_sql to query the database directly. For example: counting how many majors exist, finding the highest-paying occupations across all majors, listing all occupation categories, or answering any analytical question about the data. The schema is described in the tool definition.
 
 When a user asks about a career or job title that doesn't match our data:
 - The BLS uses very specific occupation names (e.g. "Market Research Analysts and Marketing Specialists" not "marketing person", "Customer Service Representatives" not "customer success")
