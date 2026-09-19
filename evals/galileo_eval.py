@@ -24,8 +24,6 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from galileo import galileo_context
 from galileo.experiments import run_experiment, LocalMetricConfig
-from galileo.resources.models.document import Document
-
 from agent import run_agent
 from evals.run import load_dataset
 from evals.db_wait import wait_for_db
@@ -84,12 +82,12 @@ def agent_function(input_data):
 
     logger = galileo_context.get_logger_instance()
     if logger and tool_outputs:
-        docs = [Document(content=output) for output in tool_outputs]
-        logger.add_retriever_span(
-            input=user_message,
-            output=docs,
-            name="tool_results_as_context",
-        )
+        for i, output in enumerate(tool_outputs):
+            logger.add_tool_span(
+                input=user_message,
+                output=output,
+                name=f"tool_call_{i}",
+            )
 
     return response
 
