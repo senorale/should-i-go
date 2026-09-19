@@ -2,13 +2,16 @@
 FastAPI server for the college advisor agent.
 
 Endpoints:
-- POST /chat  — send a message, get agent response
+- POST /chat  — streaming SSE: progress events then final result
 - GET  /health — health check for Railway
 """
 
+import json
+
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from agent import run_agent
+from agent import run_agent_stream, _json_default
 
 app = FastAPI(title="Should I Go - Agent API")
 
@@ -18,20 +21,15 @@ class ChatRequest(BaseModel):
     conversation_history: list[dict] | None = None
 
 
-class ChatResponse(BaseModel):
-    response: str
-    conversation_history: list[dict]
-
-
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat")
 async def chat(req: ChatRequest):
-    result = await run_agent(req.message, req.conversation_history)
-    return ChatResponse(
-        response=result["response"],
-        conversation_history=result["conversation_history"],
-    )
+    async def event_stream():
+        async for event in run_agent_stream(req.message, req.conversation_history):
+            yield f"data: {json.dumps(event, default=_json_default)}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")

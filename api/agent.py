@@ -25,6 +25,8 @@ from db import (
     find_majors_with_occupations,
     get_tuition_medians,
     run_sql,
+    search_schools,
+    get_school_programs,
 )
 
 logger = logging.getLogger(__name__)
@@ -115,11 +117,66 @@ TOOLS = [
     },
     {
         "name": "get_tuition_medians",
-        "description": "Get median annual tuition costs by school type (public in-state, public out-of-state, private nonprofit). Includes sticker price, net price after aid, and full cost of attendance.",
+        "description": "Get national median annual tuition costs by school type (public in-state, public out-of-state, private nonprofit). Includes sticker price, net price after aid, and full cost of attendance. Use this for general cost comparisons when no specific school is named.",
         "input_schema": {
             "type": "object",
             "properties": {},
             "required": [],
+        },
+    },
+    {
+        "name": "search_schools",
+        "description": "Search colleges by name, state, or both. Returns up to 10 matches (graduation rate >= 70%) with real tuition, net price by income bracket, graduation rate, median debt, and earnings. Use when a user names a specific school, wants to compare schools, or explore schools in a state. Use the filter and sort params based on the user's stated preferences from intake.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "School name to search for (e.g. 'University of Florida', 'MIT'). Optional if state is provided.",
+                },
+                "state": {
+                    "type": "string",
+                    "description": "Two-letter US state code (e.g. 'FL', 'CA'). Optional if name is provided.",
+                },
+                "ownership": {
+                    "type": "string",
+                    "enum": ["public", "private"],
+                    "description": "Filter by school type. Omit to include both.",
+                },
+                "max_net_price": {
+                    "type": "integer",
+                    "description": "Maximum annual net price after aid. Omit for no limit.",
+                },
+                "size": {
+                    "type": "string",
+                    "enum": ["small", "medium", "large"],
+                    "description": "Filter by student body size: small (<5k), medium (5k-15k), large (15k+). Omit for no preference.",
+                },
+                "sort_by": {
+                    "type": "string",
+                    "enum": ["earnings", "graduation_rate", "net_price", "median_debt"],
+                    "description": "How to rank results. earnings=highest first, graduation_rate=highest first, net_price=lowest first, median_debt=lowest first.",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "get_school_programs",
+        "description": "Get per-program earnings at a specific school. Returns median earnings 1 year and 4 years after graduation for each program (major) offered, filtered optionally by major name. Requires a school_id from search_schools results. Use this to answer 'What do CS graduates from UF actually earn?' or to compare the same major across schools.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "school_id": {
+                    "type": "integer",
+                    "description": "The school's College Scorecard ID (from search_schools results)",
+                },
+                "major_search": {
+                    "type": "string",
+                    "description": "Optional: filter programs by name (e.g. 'computer', 'nursing'). Omit to get all programs with earnings data.",
+                },
+            },
+            "required": ["school_id"],
         },
     },
     {
@@ -155,52 +212,85 @@ Database schema (PostgreSQL, all table/column names are double-quoted):
     },
 ]
 
-# Maps tool names to the actual Python functions
+_VISUAL_TOOLS = {"find_majors", "search_schools", "get_school_programs", "get_tuition_medians"}
+
+_TOOL_PROGRESS = {
+    "find_majors": ("Searching majors…", "Found matching majors"),
+    "search_schools": ("Looking up schools…", "Found schools"),
+    "get_school_programs": ("Pulling program earnings…", "Got program data"),
+    "get_tuition_medians": ("Getting tuition data…", "Got tuition data"),
+    "run_sql": ("Querying database…", "Query complete"),
+}
+
 TOOL_DISPATCH = {
     "find_majors": lambda args: find_majors_with_occupations(args["query"]),
     "get_tuition_medians": lambda _args: get_tuition_medians(),
+    "search_schools": lambda args: search_schools(
+        args.get("name"), args.get("state"), args.get("ownership"),
+        args.get("max_net_price"), args.get("size"), args.get("sort_by"),
+    ),
+    "get_school_programs": lambda args: get_school_programs(args["school_id"], args.get("major_search")),
     "run_sql": lambda args: run_sql(args["query"]),
 }
 
-SYSTEM_PROMPT = """You are a helpful college advisor agent for the "Should I Go?" app.
-You help users compare college majors by showing expected occupation salaries.
+SYSTEM_PROMPT = """You are a college counselor agent for the "Should I Go?" app. You give personalized, data-driven guidance based on each user's situation.
 
-When a user asks about a major or career:
-1. Use find_majors to search and get all linked occupations with salaries in one call
-2. Present the data clearly, noting the weighted average salary and top-earning occupations
-3. Always mention that salary data comes from the Bureau of Labor Statistics (BLS) May 2024 Occupational Employment and Wage Statistics
+TOOLS YOU HAVE:
 
-When comparing majors, you can search for multiple in one call (e.g. "engineering" returns all engineering majors) or make separate calls.
+1. find_majors(query) - Search majors by name. Returns linked occupations with BLS salaries, relevance scores, and major_id (UUID) for comparison links. Use when users ask about majors, careers from a major, or salary outcomes.
 
-For questions that the other tools can't answer, use run_sql to query the database directly. For example: counting how many majors exist, finding the highest-paying occupations across all majors, listing all occupation categories, or answering any analytical question about the data. The schema is described in the tool definition.
+2. get_tuition_medians() - National median tuition by school type (public in-state, out-of-state, private). Use for general cost questions when no specific school is named.
 
-When a user asks about a career or job title that doesn't match our data:
-- The BLS uses very specific occupation names (e.g. "Market Research Analysts and Marketing Specialists" not "marketing person", "Customer Service Representatives" not "customer success")
-- If find_majors returns no results, think about what BLS occupation category the user's career likely falls under and try broader or related search terms
-- For example: "customer success" -> try "customer service" or "management"; "data scientist" -> try "computer" or "mathematical"; "UX designer" -> try "design" or "web"
-- Tell the user you didn't find an exact match and explain what BLS categories you found that are the closest fit
-- Make it clear which BLS occupation name you're mapping their career to and why
+3. search_schools(name, state, ownership, max_net_price, sort_by) - Search schools with filters. Only returns schools with graduation rate >= 70% and complete data. Use the user's intake preferences (school type, budget, sort metric) as filter params. Sort options: earnings (highest first), graduation_rate (highest first), net_price (lowest first), median_debt (lowest first).
 
-Be conversational and ask follow-up questions to help the user think through their decision:
-- If a career path doesn't require a college degree (trades, certifications), ask the user about their expected licensing or training costs so you can help them compare
+4. get_school_programs(school_id, major_search?) - Per-program earnings at a specific school (1yr and 4yr after graduation). Requires school_id from search_schools. Use to answer "What do CS grads from UF earn?" or compare the same major across schools.
 
-Formatting rules:
+5. run_sql(query) - Read-only SQL against the database. Use for analytical questions the other tools can't answer: counting majors, finding highest-paying occupations across all fields, listing categories, occupation overlap between majors, etc.
+
+USER SEGMENTS AND HOW TO HELP EACH:
+
+Segment 1: Not in college, considering going (high school students, working adults, "not sure" about college)
+- Answer: Is college worth it financially? How much will it cost? How long until a degree pays for itself?
+- Use get_tuition_medians for general cost picture, search_schools when they name a school
+- Use find_majors to compare salary outcomes for fields they're interested in
+- Use run_sql for break-even analysis (tuition vs. salary premium over HS diploma), occupations with fewer years of school (WHERE typical_years_of_school <= 2)
+- If they opted into finances deep dive: walk through total debt, interest rates, repayment timelines, monthly payments
+- If they mention trades or alternatives to college: compare no-degree occupation salaries honestly, ask about their expected training/licensing costs
+
+Segment 2: In college, picking or changing a major
+- Answer: Which major leads to highest-paying careers? How many options does each major open? Side-by-side comparisons.
+- Use find_majors for both current and target majors
+- Use run_sql for occupation overlap between majors, career option counts, weighted average salary
+- Use get_school_programs when they name their school, to show program-specific earnings there
+- If considering dropping out: compare their current major's outcomes to no-degree paths honestly
+
+Segment 3: Graduated or not in school, comparing occupations
+- Answer: What careers match my degree? Am I underpaid? What education is needed for a career change?
+- Use find_majors to show all occupations linked to their degree
+- Use run_sql to compare salaries across occupations, browse categories, check education requirements
+- Use get_school_programs for what graduates of their school/program actually earn
+- If they opted into finances deep dive: help them understand their total debt cost and whether their earnings justify it
+
+TOOL USAGE RULES:
+
+- CRITICAL: When a user mentions a major by name, you MUST call find_majors first to get the major_id. Never generate a /compare link without a real major_id from find_majors results.
+- When a user names a specific school, call search_schools to get real data. Never guess tuition or earnings.
+- To get program-level earnings, call search_schools first (to get school_id), then get_school_programs.
+- When comparing majors, search for multiple in one call (e.g. "engineering" returns all engineering majors) or make separate calls.
+
+BLS OCCUPATION MATCHING:
+- BLS uses specific names ("Market Research Analysts and Marketing Specialists" not "marketing person")
+- If find_majors returns no results, try broader terms: "customer success" -> "customer service"; "data scientist" -> "computer"; "UX designer" -> "design"
+- Tell the user what BLS category you mapped to and why
+
+RESPONSE RULES:
+- Tool results are rendered visually in the chat automatically. You do NOT need to repeat data the tools returned. Never list salaries, tuition, earnings, or other numbers that the tool already provided.
+- Keep responses to 1-2 sentences. State the key insight or takeaway, then ask a follow-up question.
+- Do NOT generate /compare links. The visual data display is handled automatically.
 - Respond in plain text only. No markdown, no tables, no headers, no bold/italic.
-- Use line breaks and short paragraphs to organize information.
-- For lists of occupations and salaries, use simple dashes and keep it readable.
-- Keep responses concise and conversational.
-- Keep responses SHORT. Prefer 2-4 sentences plus a link over a wall of text. If an answer would take more than a short paragraph, summarize the key takeaway and link the user to the right page instead.
-
-CRITICAL: When a user mentions a major by name, you MUST call find_majors first to get the major_id before responding. Never skip the tool call. Never generate a /compare link without a real major_id from find_majors results.
-
-After calling find_majors, always include a link to the Degree Payoff Comparison: /compare?majorId=UUID (using the major_id from find_majors results). Say something like "Instead of hitting you with a wall of numbers, I set up a visual comparison for you" and put the link on its own line. The calculator loads real tuition and salary data and lets users adjust everything interactively. Never try to replicate the calculator's output in chat. Give the user the one or two most important numbers (e.g. weighted average salary, top occupation) and let the calculator handle the rest.
-
-When users ask about loan repayment, costs, ROI, payoff time, or anything that would produce a long numerical breakdown, do NOT write it out. Call find_majors to get the major_id, give a one-sentence summary, and link them to the calculator.
-
-Important notes:
-- BLS caps reported salaries at $239,200/yr, so some occupations (surgeons, physicians) earn more than shown
-- Relevance scores indicate how directly a major leads to an occupation (1.0 = direct pipeline, 0.4 = possible path)
-- Be honest about limitations: these are median salaries, individual outcomes vary widely based on location, experience, school, and market conditions
+- Be conversational. Ask follow-up questions to guide the user.
+- BLS caps reported salaries at $239,200/yr (surgeons, physicians may earn more).
+- Be honest about limitations: these are median salaries, individual outcomes vary by location, experience, school, and market conditions.
 """
 
 
@@ -236,38 +326,35 @@ async def _call_claude(messages: list[dict]):
     raise last_exc
 
 
-async def run_agent(user_message: str, conversation_history: list[dict] | None = None) -> dict:
-    """
-    Run the agent loop:
-    1. Send user message + tools to Claude
-    2. If Claude wants to use a tool, execute it and send result back
-    3. Repeat until Claude gives a final text response OR MAX_TOOL_ITERATIONS hit
-    4. Return the response and updated conversation history
+async def run_agent_stream(user_message: str, conversation_history: list[dict] | None = None):
+    """Async generator yielding progress events then a final result.
+
+    Event shapes:
+      {"event": "progress", "message": "Searching majors…"}
+      {"event": "complete", "response": "...", "data_blocks": [...], "conversation_history": [...]}
     """
     messages = list(conversation_history) if conversation_history else []
     messages.append({"role": "user", "content": user_message})
     messages = _trim_history(messages)
+    data_blocks: list[dict] = []
 
     for _ in range(MAX_TOOL_ITERATIONS):
         try:
+            yield {"event": "progress", "message": "Thinking…"}
             response = await _call_claude(messages)
         except anthropic.APIError as exc:
             logger.error("Anthropic API failed after retries: %s", exc)
-            return {
-                "response": "Sorry, I'm having trouble reaching my brain right now. Please try again in a moment.",
+            yield {
+                "event": "complete",
+                "response": "Sorry, I'm having trouble right now. Please try again in a moment.",
+                "data_blocks": [],
                 "conversation_history": messages,
             }
+            return
 
-        # Check if Claude wants to use tools or is done
         if response.stop_reason == "tool_use":
-            # Claude wants to call one or more tools.
-            # The response content has both text blocks and tool_use blocks.
-            # We need to execute each tool and send results back.
-
-            # Add Claude's response (with tool_use blocks) to history
             messages.append({"role": "assistant", "content": [b.model_dump() for b in response.content]})
 
-            # Execute each tool call and collect results
             tool_results = []
             for block in response.content:
                 if block.type == "tool_use":
@@ -275,7 +362,11 @@ async def run_agent(user_message: str, conversation_history: list[dict] | None =
                     tool_input = block.input
                     tool_id = block.id
 
-                    # Look up and execute the tool
+                    progress_start, progress_done = _TOOL_PROGRESS.get(
+                        tool_name, (f"Running {tool_name}…", f"{tool_name} done")
+                    )
+                    yield {"event": "progress", "message": progress_start}
+
                     func = TOOL_DISPATCH.get(tool_name)
                     if not func:
                         tool_results.append(
@@ -289,18 +380,19 @@ async def run_agent(user_message: str, conversation_history: list[dict] | None =
                         continue
 
                     try:
-                        # Run sync DB call in a thread so it doesn't block the event loop.
                         result = await asyncio.to_thread(func, tool_input)
+                        result_json = json.dumps(result, default=_json_default)
                         tool_results.append(
                             {
                                 "type": "tool_result",
                                 "tool_use_id": tool_id,
-                                "content": json.dumps(result, default=_json_default),
+                                "content": result_json,
                             }
                         )
+                        if tool_name in _VISUAL_TOOLS and not (isinstance(result, dict) and "error" in result):
+                            data_blocks.append({"type": tool_name, "data": result})
+                        yield {"event": "progress", "message": progress_done}
                     except Exception as exc:
-                        # Return the failure to Claude as a tool_result error so it
-                        # can recover or explain, instead of 500ing the whole request.
                         logger.exception("Tool %s failed", tool_name)
                         tool_results.append(
                             {
@@ -311,24 +403,27 @@ async def run_agent(user_message: str, conversation_history: list[dict] | None =
                             }
                         )
 
-            # Send tool results back to Claude so it can continue
             messages.append({"role": "user", "content": tool_results})
+            yield {"event": "progress", "message": "Putting report together…"}
 
         else:
-            # Claude is done (stop_reason == "end_turn"). Extract text response.
             text_response = "".join(
                 block.text for block in response.content if block.type == "text"
             )
-
             messages.append({"role": "assistant", "content": [b.model_dump() for b in response.content]})
 
-            return {
+            yield {
+                "event": "complete",
                 "response": text_response,
+                "data_blocks": data_blocks,
                 "conversation_history": messages,
             }
+            return
 
     logger.warning("Agent hit MAX_TOOL_ITERATIONS=%d without finishing", MAX_TOOL_ITERATIONS)
-    return {
+    yield {
+        "event": "complete",
         "response": "I got stuck working through that. Try rephrasing your question or asking something simpler.",
+        "data_blocks": data_blocks,
         "conversation_history": messages,
     }
