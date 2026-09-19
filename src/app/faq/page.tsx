@@ -34,27 +34,34 @@ const faqs: { q: string; a: ReactNode }[] = [
   {
     q: 'Where does the data come from?',
     a: (
-      <>
-        Salary figures are 2024 national median annual wages from the{' '}
-        <a
-          href="https://www.bls.gov/oes/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          U.S. Bureau of Labor Statistics
-        </a>
-        . School cost figures (tuition, net price, and cost of attendance) come from the{' '}
-        <a
-          href="https://collegescorecard.ed.gov/data/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          U.S. Department of Education College Scorecard
-        </a>
-        .
-      </>
+      <ul className="list-disc space-y-1.5 pl-4">
+        <li>
+          <span className="font-medium text-foreground">Salaries:</span>{' '}
+          2024 national median annual wages from the{' '}
+          <a href="https://www.bls.gov/oes/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            U.S. Bureau of Labor Statistics
+          </a>
+        </li>
+        <li>
+          <span className="font-medium text-foreground">School costs and outcomes:</span>{' '}
+          Tuition, net price, graduation rates, median debt, and per-program earnings from the{' '}
+          <a href="https://collegescorecard.ed.gov/data/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            U.S. Department of Education College Scorecard
+          </a>
+        </li>
+        <li>
+          <span className="font-medium text-foreground">Education requirements:</span>{' '}
+          Typical years of schooling per occupation from{' '}
+          <a href="https://services.onetcenter.org/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            O*NET Web Services
+          </a>{' '}
+          (U.S. Department of Labor)
+        </li>
+        <li>
+          <span className="font-medium text-foreground">Counselor Agent:</span>{' '}
+          AI-powered synthesis of these data sources into personalized guidance
+        </li>
+      </ul>
     ),
   },
   {
