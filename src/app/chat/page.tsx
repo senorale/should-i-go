@@ -299,6 +299,7 @@ function estimateTotalSteps(answers: Record<string, string>): number {
 
 function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, string>) => void }) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [history, setHistory] = useState<string[]>([])
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -315,11 +316,24 @@ function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, strin
     const trimmed = value.trim()
     if (!trimmed || !current) return
     const next = { ...answers, [current.key]: trimmed }
+    setHistory((prev) => [...prev, current.key])
     setAnswers(next)
     setInput('')
     if (!getNextStep(next)) {
       onComplete(next)
     }
+  }
+
+  function goBack() {
+    if (history.length === 0) return
+    const lastKey = history[history.length - 1]
+    setHistory((prev) => prev.slice(0, -1))
+    setAnswers((prev) => {
+      const next = { ...prev }
+      delete next[lastKey]
+      return next
+    })
+    setInput('')
   }
 
   function handleFormSubmit(e: FormEvent) {
@@ -334,9 +348,15 @@ function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, strin
       {/* Header */}
       <div className="border-b px-4 py-3">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+          {history.length > 0 ? (
+            <button onClick={goBack} className="text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          ) : (
+            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          )}
           <span className="text-sm font-medium text-foreground">Counselor Agent</span>
           <div className="w-5" />
         </div>
