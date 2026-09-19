@@ -4,6 +4,7 @@ import "./globals.css";
 import { GoogleAnalytics } from '@next/third-parties/google'
 import SideNav from "./components/nav/SideNav";
 import Footer from "./components/nav/Footer";
+import FeedbackDialog from "./components/FeedbackDialog";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
 
           </div>
           <Footer />
+          <FeedbackDialog />
         </div>
       </body>
       <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID!} />
