@@ -21,8 +21,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const data = await res.json()
-    return NextResponse.json(data)
+    return new Response(res.body, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    })
   } catch {
     return NextResponse.json(
       { error: 'Failed to reach agent API' },

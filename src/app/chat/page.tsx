@@ -447,6 +447,7 @@ interface Message {
   content: string
   data_blocks?: DataBlock[]
   showData?: boolean
+  error?: boolean
 }
 
 function ChatView({ initialPrompt }: { initialPrompt: string }) {
@@ -537,16 +538,25 @@ function ChatView({ initialPrompt }: { initialPrompt: string }) {
           }
         }
       }
-    } catch {
+    } catch (err) {
+      console.error('Agent request failed:', err)
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Something went wrong. Please try again.' },
+        { role: 'assistant' as const, content: 'Something went wrong.', error: true },
       ])
     } finally {
       setLoading(false)
       setProgress('')
       inputRef.current?.focus()
     }
+  }
+
+  function retry() {
+    const lastUserIndex = messages.findLastIndex((m) => m.role === 'user')
+    if (lastUserIndex === -1) return
+    const text = messages[lastUserIndex].content
+    setMessages((prev) => prev.filter((m) => !m.error).slice(0, lastUserIndex))
+    sendMessage(text)
   }
 
   function handleSubmit(e: FormEvent) {
@@ -597,10 +607,22 @@ function ChatView({ initialPrompt }: { initialPrompt: string }) {
                     'max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap',
                     msg.role === 'user'
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground'
+                      : msg.error
+                        ? 'bg-destructive/10 text-destructive'
+                        : 'bg-secondary text-secondary-foreground'
                   )}
                 >
                   {msg.role === 'assistant' ? linkify(msg.content) : msg.content}
+                  {msg.error && (
+                    <button
+                      onClick={retry}
+                      disabled={loading}
+                      className="mt-2 flex items-center gap-1.5 text-xs font-medium text-destructive hover:underline disabled:opacity-50"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Retry
+                    </button>
+                  )}
                 </div>
               </div>
 
