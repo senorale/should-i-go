@@ -85,6 +85,35 @@ def _trim_history(messages: list[dict]) -> list[dict]:
     return trimmed
 
 
+def _extract_data_blocks(messages: list[dict]) -> list[dict]:
+    """Reconstruct data_blocks from conversation history for report retry."""
+    tool_names: dict[str, str] = {}
+    blocks: list[dict] = []
+    for msg in messages:
+        content = msg.get("content", [])
+        if not isinstance(content, list):
+            continue
+        if msg["role"] == "assistant":
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "tool_use":
+                    tool_names[item["id"]] = item["name"]
+        elif msg["role"] == "user":
+            for item in content:
+                if not isinstance(item, dict) or item.get("type") != "tool_result":
+                    continue
+                if item.get("is_error"):
+                    continue
+                raw = item.get("content", "")
+                try:
+                    data = json.loads(raw) if isinstance(raw, str) else raw
+                    if isinstance(data, dict) and "error" not in data:
+                        tool_name = tool_names.get(item.get("tool_use_id", ""), "unknown")
+                        blocks.append({"type": tool_name, "data": data})
+                except (json.JSONDecodeError, TypeError):
+                    pass
+    return blocks
+
+
 def _retry_delay_for(exc: Exception) -> float:
     """Honor Anthropic's retry-after header on 429/5xx when present."""
     response = getattr(exc, "response", None)
@@ -313,6 +342,7 @@ async def generate_report(
     data_blocks: list[dict],
     agent_text: str,
 ) -> dict:
+    logger.info("generate_report: %d data_blocks, intake_keys=%s", len(data_blocks), list(intake_answers.keys()))
     user_content = json.dumps({
         "intake_answers": intake_answers,
         "agent_summary": agent_text,
@@ -327,10 +357,19 @@ async def generate_report(
     )
 
     text = "".join(b.text for b in response.content if b.type == "text")
+    logger.info("Report response size: %d bytes, stop_reason=%s", len(text), response.stop_reason)
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    text = text.strip()
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
+        logger.info("Report parsed OK: summary=%d chars, html=%d chars", len(parsed.get("summary", "")), len(parsed.get("html", "")))
+        return parsed
     except json.JSONDecodeError:
-        logger.error("Report generation returned invalid JSON: %s", text[:200])
+        logger.error("Report generation returned invalid JSON: %s", text[:500])
         return {"summary": agent_text, "html": ""}
 
 
@@ -456,19 +495,30 @@ async def run_agent_stream(
             messages.append({"role": "assistant", "content": [b.model_dump() for b in response.content]})
 
             report_html = ""
+            report_status = "skipped"
+            logger.info("Agent done. data_blocks=%d, intake_answers=%s", len(data_blocks), bool(intake_answers))
             if data_blocks and intake_answers:
                 yield {"event": "progress", "message": "Generating report…"}
+                report_status = "failed"
                 try:
                     report = await generate_report(intake_answers, data_blocks, text_response)
                     text_response = report.get("summary", text_response)
                     report_html = report.get("html", "")
+                    if report_html:
+                        report_status = "success"
+                        logger.info("Report OK: %d bytes HTML", len(report_html))
+                    else:
+                        logger.warning("Report returned empty HTML")
                 except Exception as exc:
                     logger.exception("Report generation failed: %s", exc)
+            else:
+                logger.info("Skipping report: data_blocks=%d, intake_answers=%s", len(data_blocks), intake_answers is not None)
 
             yield {
                 "event": "complete",
                 "response": text_response,
                 "report_html": report_html,
+                "report_status": report_status,
                 "conversation_history": messages,
             }
             return

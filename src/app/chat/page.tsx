@@ -440,6 +440,7 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   report_html?: string
+  report_status?: 'success' | 'failed' | 'skipped'
   error?: boolean
 }
 
@@ -448,6 +449,7 @@ function ChatView({ initialPrompt, intakeAnswers }: { initialPrompt: string; int
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
+  const [retryingIndex, setRetryingIndex] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const conversationHistoryRef = useRef<Record<string, unknown>[]>([])
@@ -474,6 +476,47 @@ function ChatView({ initialPrompt, intakeAnswers }: { initialPrompt: string; int
     const blob = new Blob([html], { type: 'text/html' })
     const url = URL.createObjectURL(blob)
     window.open(url, '_blank')
+  }
+
+  async function retryReport(messageIndex: number) {
+    const msg = messages[messageIndex]
+    setRetryingIndex(messageIndex)
+
+    try {
+      const res = await fetch('/api/retry-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intake_answers: intakeAnswers,
+          conversation_history: conversationHistoryRef.current,
+          agent_text: msg.content,
+        }),
+      })
+
+      if (!res.ok) throw new Error(`Server error: ${res.status}`)
+
+      const report = await res.json()
+
+      if (report.html) {
+        setMessages((prev) => prev.map((m, i) =>
+          i === messageIndex
+            ? { ...m, content: report.summary || m.content, report_html: report.html, report_status: 'success' as const }
+            : m
+        ))
+      } else {
+        console.error('Report retry returned empty HTML:', report.error)
+        setMessages((prev) => prev.map((m, i) =>
+          i === messageIndex ? { ...m, report_status: 'failed' as const } : m
+        ))
+      }
+    } catch (err) {
+      console.error('Report retry failed:', err)
+      setMessages((prev) => prev.map((m, i) =>
+        i === messageIndex ? { ...m, report_status: 'failed' as const } : m
+      ))
+    } finally {
+      setRetryingIndex(null)
+    }
   }
 
   async function sendMessage(text: string) {
@@ -516,6 +559,10 @@ function ChatView({ initialPrompt, intakeAnswers }: { initialPrompt: string; int
           if (event.event === 'progress') {
             setProgress(event.message)
           } else if (event.event === 'complete') {
+            console.log('Agent complete:', {
+              report_status: event.report_status,
+              report_html_length: event.report_html?.length ?? 0,
+            })
             conversationHistoryRef.current = event.conversation_history
             setMessages((prev) => [
               ...prev,
@@ -523,6 +570,7 @@ function ChatView({ initialPrompt, intakeAnswers }: { initialPrompt: string; int
                 role: 'assistant' as const,
                 content: event.response,
                 report_html: event.report_html || undefined,
+                report_status: event.report_status,
               },
             ])
           }
@@ -624,6 +672,19 @@ function ChatView({ initialPrompt, intakeAnswers }: { initialPrompt: string; int
                   >
                     <FileText className="h-4 w-4" />
                     View report
+                  </button>
+                </div>
+              )}
+
+              {msg.report_status === 'failed' && !msg.report_html && (
+                <div className="flex justify-start">
+                  <button
+                    onClick={() => retryReport(i)}
+                    disabled={retryingIndex === i}
+                    className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:bg-amber-950/30 dark:text-amber-400 dark:hover:bg-amber-950/50"
+                  >
+                    <RotateCcw className={cn('h-4 w-4', retryingIndex === i && 'animate-spin')} />
+                    {retryingIndex === i ? 'Generating report…' : 'Generate report'}
                   </button>
                 </div>
               )}
