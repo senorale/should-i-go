@@ -15,6 +15,9 @@ engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 ONET_API_KEY = os.environ.get("O_NET_API_KEY", "")
 ONET_BASE_URL = "https://api-v2.onetcenter.org"
 
+SCORECARD_API_KEY = os.environ.get("COLLEGE_SCORECARD_API_KEY", "")
+SCORECARD_BASE_URL = "https://api.data.gov/ed/collegescorecard/v1/schools"
+
 EDUCATION_CODE_TO_YEARS = {
     1: 0,    # Less than high school
     2: 0,    # High school diploma or equivalent
@@ -158,3 +161,202 @@ def get_tuition_medians() -> list[dict]:
             """)
         )
         return [dict(r._mapping) for r in rows]
+
+
+_SCHOOL_FIELDS = ",".join([
+    "id",
+    "school.name",
+    "school.city",
+    "school.state",
+    "school.school_url",
+    "school.ownership",
+    "latest.cost.tuition.in_state",
+    "latest.cost.tuition.out_of_state",
+    "latest.cost.avg_net_price.overall",
+    "latest.cost.net_price.consumer.by_income_level.0-30000",
+    "latest.cost.net_price.consumer.by_income_level.30001-48000",
+    "latest.cost.net_price.consumer.by_income_level.48001-75000",
+    "latest.cost.net_price.consumer.by_income_level.75001-110000",
+    "latest.cost.net_price.consumer.by_income_level.110001-plus",
+    "latest.completion.rate_suppressed.overall",
+    "latest.aid.median_debt_suppressed.overall",
+    "latest.earnings.10_yrs_after_entry.median",
+])
+
+_OWNERSHIP_LABELS = {1: "Public", 2: "Private nonprofit", 3: "Private for-profit"}
+
+
+_OWNERSHIP_FILTER = {
+    "public": 1,
+    "private": 2,
+}
+
+
+def search_schools(
+    name: str | None = None,
+    state: str | None = None,
+    ownership: str | None = None,
+    max_net_price: int | None = None,
+    size: str | None = None,
+    sort_by: str | None = None,
+) -> dict:
+    """Search schools by name and/or state via College Scorecard API. Supports
+    filtering by ownership (public/private), max net price, and sorting by
+    earnings, graduation_rate, net_price, or median_debt."""
+    if not SCORECARD_API_KEY:
+        return {"error": "College Scorecard API key not configured", "results": []}
+    if not name and not state:
+        return {"error": "Provide at least a school name or state", "results": []}
+    if state and (len(state) != 2 or not state.isalpha()):
+        return {"error": "State must be a two-letter code (e.g. 'FL', 'CA')", "results": []}
+
+    params: dict = {
+        "api_key": SCORECARD_API_KEY,
+        "fields": _SCHOOL_FIELDS,
+        "per_page": 25,
+        "latest.completion.rate_suppressed.overall__range": "0.70..",
+    }
+    if name:
+        params["school.name"] = name
+    if state:
+        params["school.state"] = state.upper()
+    if ownership and ownership.lower() in _OWNERSHIP_FILTER:
+        params["school.ownership"] = _OWNERSHIP_FILTER[ownership.lower()]
+    if max_net_price and max_net_price > 0:
+        params["latest.cost.avg_net_price.overall__range"] = f"..{max_net_price}"
+    if size == "small":
+        params["latest.student.size__range"] = "..5000"
+    elif size == "medium":
+        params["latest.student.size__range"] = "5000..15000"
+    elif size == "large":
+        params["latest.student.size__range"] = "15000.."
+
+    sort_key = sort_by or ""
+
+    resp = requests.get(SCORECARD_BASE_URL, params=params, timeout=15)
+
+    if resp.status_code != 200:
+        logger.warning("College Scorecard returned %d for '%s'", resp.status_code, name)
+        return {"error": f"Scorecard API returned {resp.status_code}", "results": []}
+
+    results = resp.json().get("results", [])
+    schools = []
+    for r in results:
+        grad_rate = r.get("latest.completion.rate_suppressed.overall")
+        median_debt = r.get("latest.aid.median_debt_suppressed.overall")
+        earnings = r.get("latest.earnings.10_yrs_after_entry.median")
+        avg_net_price = r.get("latest.cost.avg_net_price.overall")
+
+        if grad_rate is None or median_debt is None or earnings is None or avg_net_price is None:
+            continue
+
+        schools.append({
+            "school_id": r.get("id"),
+            "name": r.get("school.name"),
+            "city": r.get("school.city"),
+            "state": r.get("school.state"),
+            "url": r.get("school.school_url"),
+            "type": _OWNERSHIP_LABELS.get(r.get("school.ownership"), "Unknown"),
+            "tuition_in_state": r.get("latest.cost.tuition.in_state"),
+            "tuition_out_of_state": r.get("latest.cost.tuition.out_of_state"),
+            "avg_net_price": avg_net_price,
+            "net_price_by_income": {
+                "0-30000": r.get("latest.cost.net_price.consumer.by_income_level.0-30000"),
+                "30001-48000": r.get("latest.cost.net_price.consumer.by_income_level.30001-48000"),
+                "48001-75000": r.get("latest.cost.net_price.consumer.by_income_level.48001-75000"),
+                "75001-110000": r.get("latest.cost.net_price.consumer.by_income_level.75001-110000"),
+                "110001-plus": r.get("latest.cost.net_price.consumer.by_income_level.110001-plus"),
+            },
+            "graduation_rate": grad_rate,
+            "median_debt": median_debt,
+            "earnings_10yr_after_entry": earnings,
+        })
+        if len(schools) >= 10:
+            break
+
+    sort_field_map = {
+        "earnings": ("earnings_10yr_after_entry", True),
+        "graduation_rate": ("graduation_rate", True),
+        "net_price": ("avg_net_price", False),
+        "median_debt": ("median_debt", False),
+    }
+    if sort_key in sort_field_map:
+        field, descending = sort_field_map[sort_key]
+        schools.sort(key=lambda s: s.get(field) or 0, reverse=descending)
+
+    return {"results": schools}
+
+
+_PROGRAM_FIELDS = ",".join([
+    "id",
+    "school.name",
+    "latest.programs.cip_4_digit.code",
+    "latest.programs.cip_4_digit.title",
+    "latest.programs.cip_4_digit.credential.level",
+    "latest.programs.cip_4_digit.earnings.highest.1_yr.overall_median_earnings",
+    "latest.programs.cip_4_digit.earnings.highest.4_yr.overall_median_earnings",
+])
+
+_CREDENTIAL_LEVELS = {
+    1: "Certificate (<1 yr)",
+    2: "Certificate (1-2 yr)",
+    3: "Associate's",
+    4: "Certificate (2-4 yr)",
+    5: "Bachelor's",
+    6: "Post-baccalaureate certificate",
+    7: "Master's",
+    8: "Doctoral",
+}
+
+
+def get_school_programs(school_id: int, major_search: str | None = None) -> dict:
+    """Get per-program earnings at a specific school. Optionally filter by major name.
+    Returns 1yr and 4yr post-graduation median earnings by program."""
+    if not SCORECARD_API_KEY:
+        return {"error": "College Scorecard API key not configured"}
+
+    resp = requests.get(SCORECARD_BASE_URL, params={
+        "id": school_id,
+        "api_key": SCORECARD_API_KEY,
+        "fields": _PROGRAM_FIELDS,
+        "per_page": 1,
+    }, timeout=15)
+
+    if resp.status_code != 200:
+        logger.warning("College Scorecard returned %d for school %d", resp.status_code, school_id)
+        return {"error": f"Scorecard API returned {resp.status_code}"}
+
+    results = resp.json().get("results", [])
+    if not results:
+        return {"error": f"No school found with id {school_id}"}
+
+    school = results[0]
+    programs_raw = school.get("latest.programs.cip_4_digit", []) or []
+
+    programs = []
+    search_lower = major_search.lower() if major_search else None
+    for p in programs_raw:
+        title = p.get("title", "")
+        if search_lower and search_lower not in title.lower():
+            continue
+        earnings = p.get("earnings", {}).get("highest", {})
+        earnings_1yr = earnings.get("1_yr", {}).get("overall_median_earnings")
+        earnings_4yr = earnings.get("4_yr", {}).get("overall_median_earnings")
+        if earnings_1yr is None and earnings_4yr is None:
+            continue
+        cred_level = p.get("credential", {}).get("level")
+        programs.append({
+            "cip_code": p.get("code"),
+            "title": title,
+            "credential": _CREDENTIAL_LEVELS.get(cred_level, f"Level {cred_level}"),
+            "earnings_1yr_after_graduation": earnings_1yr,
+            "earnings_4yr_after_graduation": earnings_4yr,
+        })
+
+    programs.sort(key=lambda x: x.get("earnings_4yr_after_graduation") or x.get("earnings_1yr_after_graduation") or 0, reverse=True)
+
+    return {
+        "school_id": school.get("id"),
+        "school_name": school.get("school.name"),
+        "programs": programs[:25],
+    }
