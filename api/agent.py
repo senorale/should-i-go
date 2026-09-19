@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 client = anthropic.AsyncAnthropic()
 MODEL = "claude-haiku-4-5-20251001"
+REPORT_MODEL = "claude-haiku-4-5-20251001"
+REPORT_MAX_TOKENS = 8192
 
 # Cap agent loop so a misbehaving model can't spin forever.
 # 8 = enough for realistic multi-tool trajectories, small enough that
@@ -212,8 +214,6 @@ Database schema (PostgreSQL, all table/column names are double-quoted):
     },
 ]
 
-_VISUAL_TOOLS = {"find_majors", "search_schools", "get_school_programs", "get_tuition_medians"}
-
 _TOOL_PROGRESS = {
     "find_majors": ("Searching majors…", "Found matching majors"),
     "search_schools": ("Looking up schools…", "Found schools"),
@@ -233,65 +233,105 @@ TOOL_DISPATCH = {
     "run_sql": lambda args: run_sql(args["query"]),
 }
 
-SYSTEM_PROMPT = """You are a college counselor agent for the "Should I Go?" app. You give personalized, data-driven guidance based on each user's situation.
+SYSTEM_PROMPT = """You are a data-gathering agent for the "Should I Go?" college advisor app. Your job is to collect all relevant data for a user's situation by calling tools. A separate step will synthesize and present the data.
 
-TOOLS YOU HAVE:
+TOOLS:
 
-1. find_majors(query) - Search majors by name. Returns linked occupations with BLS salaries, relevance scores, and major_id (UUID) for comparison links. Use when users ask about majors, careers from a major, or salary outcomes.
+1. find_majors(query) - Search majors by name. Returns linked occupations with BLS salaries, relevance scores, and major_id.
+2. get_tuition_medians() - National median tuition by school type (public in-state, out-of-state, private).
+3. search_schools(name, state, ownership, max_net_price, sort_by) - Search schools with filters. Only returns schools with graduation rate >= 70%. Use intake preferences as filter params.
+4. get_school_programs(school_id, major_search?) - Per-program earnings at a specific school. Requires school_id from search_schools.
+5. run_sql(query) - Read-only SQL for analytical questions the other tools can't answer.
 
-2. get_tuition_medians() - National median tuition by school type (public in-state, out-of-state, private). Use for general cost questions when no specific school is named.
+DATA GATHERING BY SEGMENT:
 
-3. search_schools(name, state, ownership, max_net_price, sort_by) - Search schools with filters. Only returns schools with graduation rate >= 70% and complete data. Use the user's intake preferences (school type, budget, sort metric) as filter params. Sort options: earnings (highest first), graduation_rate (highest first), net_price (lowest first), median_debt (lowest first).
+Considering college:
+- get_tuition_medians for cost baseline
+- search_schools when they name schools or a state (use their school_type, budget, size, sort preferences as filters)
+- find_majors for each field of interest
+- get_school_programs for their target schools + majors
+- run_sql for break-even analysis, occupations with low typical_years_of_school
 
-4. get_school_programs(school_id, major_search?) - Per-program earnings at a specific school (1yr and 4yr after graduation). Requires school_id from search_schools. Use to answer "What do CS grads from UF earn?" or compare the same major across schools.
+In college:
+- find_majors for current major AND any alternatives mentioned
+- get_school_programs for their school if named
+- run_sql for occupation overlap, career option counts, weighted salary comparisons
 
-5. run_sql(query) - Read-only SQL against the database. Use for analytical questions the other tools can't answer: counting majors, finding highest-paying occupations across all fields, listing categories, occupation overlap between majors, etc.
+Not in school:
+- find_majors for their degree field
+- run_sql for salary comparisons, education requirements across occupations
+- get_school_programs if they name their school
 
-USER SEGMENTS AND HOW TO HELP EACH:
+RULES:
 
-Segment 1: Not in college, considering going (high school students, working adults, "not sure" about college)
-- Answer: Is college worth it financially? How much will it cost? How long until a degree pays for itself?
-- Use get_tuition_medians for general cost picture, search_schools when they name a school
-- Use find_majors to compare salary outcomes for fields they're interested in
-- Use run_sql for break-even analysis (tuition vs. salary premium over HS diploma), occupations with fewer years of school (WHERE typical_years_of_school <= 2)
-- If they opted into finances deep dive: walk through total debt, interest rates, repayment timelines, monthly payments
-- If they mention trades or alternatives to college: compare no-degree occupation salaries honestly, ask about their expected training/licensing costs
+- Call ALL relevant tools for the user's situation in the first turn. Gather broadly.
+- When a user mentions a major, call find_majors. When they name a school, call search_schools.
+- To get program earnings, call search_schools first (for school_id), then get_school_programs.
+- If find_majors returns no results, try broader search terms.
+- For finances deep dive: use run_sql for break-even calculations, debt projections.
+- BLS caps reported salaries at $239,200/yr.
 
-Segment 2: In college, picking or changing a major
-- Answer: Which major leads to highest-paying careers? How many options does each major open? Side-by-side comparisons.
-- Use find_majors for both current and target majors
-- Use run_sql for occupation overlap between majors, career option counts, weighted average salary
-- Use get_school_programs when they name their school, to show program-specific earnings there
-- If considering dropping out: compare their current major's outcomes to no-degree paths honestly
+RESPONSE:
 
-Segment 3: Graduated or not in school, comparing occupations
-- Answer: What careers match my degree? Am I underpaid? What education is needed for a career change?
-- Use find_majors to show all occupations linked to their degree
-- Use run_sql to compare salaries across occupations, browse categories, check education requirements
-- Use get_school_programs for what graduates of their school/program actually earn
-- If they opted into finances deep dive: help them understand their total debt cost and whether their earnings justify it
+After gathering data, respond with ONE sentence confirming what you found. Example: "I pulled data on 6 California schools, Biology and Pre-Med career paths, and national tuition benchmarks."
 
-TOOL USAGE RULES:
-
-- CRITICAL: When a user mentions a major by name, you MUST call find_majors first to get the major_id. Never generate a /compare link without a real major_id from find_majors results.
-- When a user names a specific school, call search_schools to get real data. Never guess tuition or earnings.
-- To get program-level earnings, call search_schools first (to get school_id), then get_school_programs.
-- When comparing majors, search for multiple in one call (e.g. "engineering" returns all engineering majors) or make separate calls.
-
-BLS OCCUPATION MATCHING:
-- BLS uses specific names ("Market Research Analysts and Marketing Specialists" not "marketing person")
-- If find_majors returns no results, try broader terms: "customer success" -> "customer service"; "data scientist" -> "computer"; "UX designer" -> "design"
-- Tell the user what BLS category you mapped to and why
-
-RESPONSE RULES:
-- Tool results are rendered visually in the chat automatically. You do NOT need to repeat data the tools returned. Never list salaries, tuition, earnings, or other numbers that the tool already provided.
-- Keep responses to 1-2 sentences. State the key insight or takeaway, then ask a follow-up question.
-- Do NOT generate /compare links. The visual data display is handled automatically.
-- Respond in plain text only. No markdown, no tables, no headers, no bold/italic.
-- Be conversational. Ask follow-up questions to guide the user.
-- BLS caps reported salaries at $239,200/yr (surgeons, physicians may earn more).
-- Be honest about limitations: these are median salaries, individual outcomes vary by location, experience, school, and market conditions.
+Do not narrate the data. Do not list numbers. Do not use markdown. A report will be generated separately from your tool results.
 """
+
+REPORT_SYSTEM_PROMPT = """You generate HTML reports for a college advisor app. You receive raw data from tool calls and the user's intake profile.
+
+Generate a single self-contained HTML page that presents the findings as a clear, personalized report.
+
+HTML RULES:
+- All CSS in a single <style> tag. No external stylesheets except Google Fonts (one clean font).
+- Charts as inline SVG: horizontal bar charts for salary comparisons, grouped bars for cost comparisons. Label bars directly, no legend needed.
+- Clean, professional design. White background. Good contrast. Readable at 14-16px base.
+- Responsive: works on phone (320px) and desktop.
+- Print-friendly: no fixed positioning, no dark backgrounds, page breaks between sections.
+- Include a fixed-position "Save Report" button (top-right corner) that triggers a download of the page as an HTML file. Use this exact script:
+  <button onclick="(function(){var a=document.createElement('a');a.href='data:text/html,'+encodeURIComponent(document.documentElement.outerHTML);a.download='should-i-go-report.html';a.click()})()">Save Report</button>
+  Style it to match the report design. Hide it in print (@media print { .save-btn { display: none } }).
+
+CONTENT RULES:
+- Open with a bold 1-2 sentence personalized headline takeaway.
+- Group data into logical sections with clear headings. Order by importance to this user.
+- Omit data not relevant to the user's stated priorities and segment.
+- Highlight comparisons: which school is cheapest, which major pays most, what the gap is.
+- Include a "What this means for you" sentence in each section tied to their priorities.
+- For income-based net price data, highlight the bracket closest to the user's situation if known.
+- Footer: "Data sources: BLS May 2024, College Scorecard. Generated [today's date]."
+- BLS caps reported salaries at $239,200/yr; note this where relevant.
+- Be honest about limitations: medians vary by location, experience, and market conditions.
+
+RESPOND WITH ONLY VALID JSON:
+{"summary": "1-2 sentence plain text takeaway for chat", "html": "<!DOCTYPE html>..."}
+"""
+
+
+async def generate_report(
+    intake_answers: dict,
+    data_blocks: list[dict],
+    agent_text: str,
+) -> dict:
+    user_content = json.dumps({
+        "intake_answers": intake_answers,
+        "agent_summary": agent_text,
+        "tool_results": data_blocks,
+    }, default=_json_default)
+
+    response = await client.messages.create(
+        model=REPORT_MODEL,
+        max_tokens=REPORT_MAX_TOKENS,
+        system=REPORT_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_content}],
+    )
+
+    text = "".join(b.text for b in response.content if b.type == "text")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        logger.error("Report generation returned invalid JSON: %s", text[:200])
+        return {"summary": agent_text, "html": ""}
 
 
 async def _call_claude(messages: list[dict]):
@@ -326,12 +366,16 @@ async def _call_claude(messages: list[dict]):
     raise last_exc
 
 
-async def run_agent_stream(user_message: str, conversation_history: list[dict] | None = None):
+async def run_agent_stream(
+    user_message: str,
+    conversation_history: list[dict] | None = None,
+    intake_answers: dict | None = None,
+):
     """Async generator yielding progress events then a final result.
 
     Event shapes:
       {"event": "progress", "message": "Searching majors…"}
-      {"event": "complete", "response": "...", "data_blocks": [...], "conversation_history": [...]}
+      {"event": "complete", "response": "...", "report_html": "...", "conversation_history": [...]}
     """
     messages = list(conversation_history) if conversation_history else []
     messages.append({"role": "user", "content": user_message})
@@ -389,7 +433,7 @@ async def run_agent_stream(user_message: str, conversation_history: list[dict] |
                                 "content": result_json,
                             }
                         )
-                        if tool_name in _VISUAL_TOOLS and not (isinstance(result, dict) and "error" in result):
+                        if not (isinstance(result, dict) and "error" in result):
                             data_blocks.append({"type": tool_name, "data": result})
                         yield {"event": "progress", "message": progress_done}
                     except Exception as exc:
@@ -404,7 +448,6 @@ async def run_agent_stream(user_message: str, conversation_history: list[dict] |
                         )
 
             messages.append({"role": "user", "content": tool_results})
-            yield {"event": "progress", "message": "Putting report together…"}
 
         else:
             text_response = "".join(
@@ -412,10 +455,20 @@ async def run_agent_stream(user_message: str, conversation_history: list[dict] |
             )
             messages.append({"role": "assistant", "content": [b.model_dump() for b in response.content]})
 
+            report_html = ""
+            if data_blocks and intake_answers:
+                yield {"event": "progress", "message": "Generating report…"}
+                try:
+                    report = await generate_report(intake_answers, data_blocks, text_response)
+                    text_response = report.get("summary", text_response)
+                    report_html = report.get("html", "")
+                except Exception as exc:
+                    logger.exception("Report generation failed: %s", exc)
+
             yield {
                 "event": "complete",
                 "response": text_response,
-                "data_blocks": data_blocks,
+                "report_html": report_html,
                 "conversation_history": messages,
             }
             return
@@ -424,6 +477,6 @@ async def run_agent_stream(user_message: str, conversation_history: list[dict] |
     yield {
         "event": "complete",
         "response": "I got stuck working through that. Try rephrasing your question or asking something simpler.",
-        "data_blocks": data_blocks,
+        "report_html": "",
         "conversation_history": messages,
     }

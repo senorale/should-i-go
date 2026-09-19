@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback, FormEvent } from 'react'
-import { Send, RotateCcw, ArrowRight, ArrowLeft, ChevronDown, Eye } from 'lucide-react'
+import { Send, RotateCcw, ArrowRight, ArrowLeft, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { linkify } from '@/app/components/chat/linkify'
-import DataDisplay from '@/app/components/chat/DataDisplay'
 
 interface IntakeStep {
   key: string
@@ -437,20 +436,14 @@ function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, strin
   )
 }
 
-interface DataBlock {
-  type: string
-  data: unknown
-}
-
 interface Message {
   role: 'user' | 'assistant'
   content: string
-  data_blocks?: DataBlock[]
-  showData?: boolean
+  report_html?: string
   error?: boolean
 }
 
-function ChatView({ initialPrompt }: { initialPrompt: string }) {
+function ChatView({ initialPrompt, intakeAnswers }: { initialPrompt: string; intakeAnswers: Record<string, string> }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -477,12 +470,10 @@ function ChatView({ initialPrompt }: { initialPrompt: string }) {
     window.location.reload()
   }, [])
 
-  function toggleData(index: number) {
-    setMessages((prev) =>
-      prev.map((msg, i) =>
-        i === index ? { ...msg, showData: !msg.showData } : msg
-      )
-    )
+  function openReport(html: string) {
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
   }
 
   async function sendMessage(text: string) {
@@ -497,6 +488,7 @@ function ChatView({ initialPrompt }: { initialPrompt: string }) {
         body: JSON.stringify({
           message: text,
           conversation_history: conversationHistoryRef.current,
+          intake_answers: intakeAnswers,
         }),
       })
 
@@ -525,14 +517,12 @@ function ChatView({ initialPrompt }: { initialPrompt: string }) {
             setProgress(event.message)
           } else if (event.event === 'complete') {
             conversationHistoryRef.current = event.conversation_history
-            const hasData = event.data_blocks?.length > 0
             setMessages((prev) => [
               ...prev,
               {
                 role: 'assistant' as const,
                 content: event.response,
-                data_blocks: event.data_blocks,
-                showData: !hasData,
+                report_html: event.report_html || undefined,
               },
             ])
           }
@@ -626,21 +616,16 @@ function ChatView({ initialPrompt }: { initialPrompt: string }) {
                 </div>
               </div>
 
-              {msg.data_blocks && msg.data_blocks.length > 0 && !msg.showData && (
+              {msg.report_html && (
                 <div className="flex justify-start">
                   <button
-                    onClick={() => toggleData(i)}
+                    onClick={() => openReport(msg.report_html!)}
                     className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
                   >
-                    <Eye className="h-4 w-4" />
+                    <FileText className="h-4 w-4" />
                     View report
-                    <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                 </div>
-              )}
-
-              {msg.showData && msg.data_blocks && msg.data_blocks.length > 0 && (
-                <DataDisplay blocks={msg.data_blocks} />
               )}
             </div>
           ))}
@@ -727,9 +712,11 @@ function buildPrompt(answers: Record<string, string>): string {
 export default function CounselorPage() {
   const [phase, setPhase] = useState<'intake' | 'chat'>('intake')
   const [prompt, setPrompt] = useState('')
+  const [answers, setAnswers] = useState<Record<string, string>>({})
 
-  function handleIntakeComplete(answers: Record<string, string>) {
-    setPrompt(buildPrompt(answers))
+  function handleIntakeComplete(intake: Record<string, string>) {
+    setAnswers(intake)
+    setPrompt(buildPrompt(intake))
     setPhase('chat')
   }
 
@@ -737,5 +724,5 @@ export default function CounselorPage() {
     return <IntakeFlow onComplete={handleIntakeComplete} />
   }
 
-  return <ChatView initialPrompt={prompt} />
+  return <ChatView initialPrompt={prompt} intakeAnswers={answers} />
 }
