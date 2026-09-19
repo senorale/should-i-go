@@ -8,10 +8,6 @@ import { cn } from '@/lib/utils'
 import { linkify } from '@/app/components/chat/linkify'
 import DataDisplay from '@/app/components/chat/DataDisplay'
 
-// ---------------------------------------------------------------------------
-// Decision tree intake
-// ---------------------------------------------------------------------------
-
 interface IntakeStep {
   key: string
   question: string
@@ -225,7 +221,6 @@ function getNextStep(answers: Record<string, string>): IntakeStep | null {
   const isInCollege = segment.includes('in college')
   const isNotInSchool = segment.includes('not in school')
 
-  // --- Segment 1: Considering college ---
   if (isConsidering) {
     if (!keys.includes('school_approach')) return SCHOOL_APPROACH_STEP
     const approach = answers.school_approach?.toLowerCase() ?? ''
@@ -243,7 +238,6 @@ function getNextStep(answers: Record<string, string>): IntakeStep | null {
     return null
   }
 
-  // --- Segment 2: In college ---
   if (isInCollege) {
     if (!keys.includes('current_major')) return CURRENT_MAJOR_STEP
     if (!keys.includes('change_reason')) return CHANGE_REASON_STEP
@@ -253,7 +247,6 @@ function getNextStep(answers: Record<string, string>): IntakeStep | null {
     return null
   }
 
-  // --- Segment 3: Not in school ---
   if (isNotInSchool) {
     if (!keys.includes('has_degree')) return HAS_DEGREE_STEP
     const hasDegree = answers.has_degree?.toLowerCase().startsWith('yes')
@@ -266,7 +259,6 @@ function getNextStep(answers: Record<string, string>): IntakeStep | null {
     return null
   }
 
-  // Freeform segment answer: ask interests then priority
   if (!keys.includes('interests')) return INTERESTS_STEP
   if (!keys.includes('priority')) return PRIORITY_STEP
   return null
@@ -293,13 +285,10 @@ function estimateTotalSteps(answers: Record<string, string>): number {
   return 5
 }
 
-// ---------------------------------------------------------------------------
-// Intake phase UI
-// ---------------------------------------------------------------------------
-
 function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, string>) => void }) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [history, setHistory] = useState<string[]>([])
+  const [selected, setSelected] = useState('')
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -312,12 +301,20 @@ function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, strin
     inputRef.current?.focus()
   }, [answeredCount])
 
-  function submit(value: string) {
-    const trimmed = value.trim()
-    if (!trimmed || !current) return
-    const next = { ...answers, [current.key]: trimmed }
+  useEffect(() => {
+    if (!current) return
+    setSelected(answers[current.key] ?? '')
+    setInput(answers[current.key] ?? '')
+  }, [current, answers])
+
+  const pending = current?.options ? selected : input.trim()
+
+  function advance() {
+    if (!pending || !current) return
+    const next = { ...answers, [current.key]: pending }
     setHistory((prev) => [...prev, current.key])
     setAnswers(next)
+    setSelected('')
     setInput('')
     if (!getNextStep(next)) {
       onComplete(next)
@@ -333,34 +330,22 @@ function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, strin
       delete next[lastKey]
       return next
     })
+    setSelected('')
     setInput('')
-  }
-
-  function handleFormSubmit(e: FormEvent) {
-    e.preventDefault()
-    submit(input)
   }
 
   if (!current) return null
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header */}
       <div className="border-b px-4 py-3">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
-          {history.length > 0 ? (
-            <button onClick={goBack} className="text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-          ) : (
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          )}
+          <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
           <span className="text-sm font-medium text-foreground">Counselor Agent</span>
           <div className="w-5" />
         </div>
-        {/* Progress bar */}
         <div className="mx-auto mt-3 max-w-2xl">
           <div className="h-1 w-full rounded-full bg-secondary">
             <div
@@ -371,7 +356,6 @@ function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, strin
         </div>
       </div>
 
-      {/* Question */}
       <div className="flex flex-1 flex-col items-center justify-center px-4">
         <div className="w-full max-w-2xl space-y-8">
           <div className="text-center space-y-2">
@@ -383,14 +367,18 @@ function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, strin
             </p>
           </div>
 
-          {/* Option chips */}
           {current.options && (
             <div className="flex flex-wrap justify-center gap-2">
               {current.options.map((option) => (
                 <button
                   key={option}
-                  onClick={() => submit(option)}
-                  className="rounded-full border-2 border-border px-4 py-2 text-sm transition-all hover:border-primary hover:bg-primary/5"
+                  onClick={() => setSelected(selected === option ? '' : option)}
+                  className={cn(
+                    'rounded-full border-2 px-4 py-2 text-sm transition-all',
+                    selected === option
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary hover:bg-primary/5'
+                  )}
                 >
                   {option}
                 </button>
@@ -398,50 +386,56 @@ function IntakeFlow({ onComplete }: { onComplete: (answers: Record<string, strin
             </div>
           )}
 
-          {/* Text input (hidden when placeholder is empty, i.e. buttons-only step) */}
           {current.placeholder && (
-            <form onSubmit={handleFormSubmit}>
-              <div className="relative">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value)
-                    e.target.style.height = 'auto'
-                    e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleFormSubmit(e)
-                    }
-                  }}
-                  placeholder={current.placeholder}
-                  rows={3}
-                  className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                />
-                <button
-                  type="submit"
-                  disabled={!input.trim()}
-                  className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-foreground/50 transition-colors hover:bg-foreground/20 disabled:opacity-30"
-                >
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-              <p className="mt-2 text-center text-xs text-muted-foreground">
-                Enter to send
-              </p>
-            </form>
+            <div className="relative">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value)
+                  setSelected('')
+                  e.target.style.height = 'auto'
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    advance()
+                  }
+                }}
+                placeholder={current.placeholder}
+                rows={3}
+                className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
           )}
+        </div>
+      </div>
+
+      <div className="border-t px-4 py-4">
+        <div className="mx-auto flex max-w-2xl items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            onClick={goBack}
+            disabled={history.length === 0}
+            className="gap-1.5"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <Button
+            onClick={advance}
+            disabled={!pending}
+            className="gap-1.5"
+          >
+            Next
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Chat phase UI
-// ---------------------------------------------------------------------------
 
 interface DataBlock {
   type: string
@@ -678,10 +672,6 @@ function ChatView({ initialPrompt }: { initialPrompt: string }) {
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Page: intake then chat
-// ---------------------------------------------------------------------------
 
 function buildPrompt(answers: Record<string, string>): string {
   const lines = ["Here's my situation:"]
