@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import ChatPanel from './ChatPanel'
 
 export default function ChatToggle() {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
 
   return (
     <>
