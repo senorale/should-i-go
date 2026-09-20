@@ -1,9 +1,11 @@
 import logging
 import os
 import re
+import time
 
 import requests
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -93,13 +95,27 @@ _FORBIDDEN_RE = re.compile(
 )
 
 
+_DB_RETRY_DELAYS = [1, 2, 4]
+
+
+def _connect_with_retry():
+    for attempt, delay in enumerate(_DB_RETRY_DELAYS):
+        try:
+            return engine.connect()
+        except OperationalError:
+            if attempt == len(_DB_RETRY_DELAYS) - 1:
+                raise
+            logger.warning("DB connection failed, retrying in %ds", delay)
+            time.sleep(delay)
+
+
 def run_sql(query: str) -> list[dict]:
     """Execute a read-only SQL query. Only SELECT statements allowed."""
     if not _SELECT_ONLY_RE.match(query):
         raise ValueError("Only SELECT statements are allowed.")
     if _FORBIDDEN_RE.search(query):
         raise ValueError("Write operations are not allowed.")
-    with engine.connect() as conn:
+    with _connect_with_retry() as conn:
         rows = conn.execute(text(query))
         results = [dict(r._mapping) for r in rows]
     if len(results) > MAX_SQL_ROWS:
@@ -109,7 +125,7 @@ def run_sql(query: str) -> list[dict]:
 
 def find_majors_with_occupations(query: str) -> list[dict]:
     """Search majors by name and return each match with all linked occupations, salaries, and relevance."""
-    with engine.connect() as conn:
+    with _connect_with_retry() as conn:
         rows = conn.execute(
             text("""
                 SELECT m.id AS major_id,
@@ -151,7 +167,7 @@ def find_majors_with_occupations(query: str) -> list[dict]:
 
 def get_tuition_medians() -> list[dict]:
     """Get median tuition data by school type."""
-    with engine.connect() as conn:
+    with _connect_with_retry() as conn:
         rows = conn.execute(
             text("""
                 SELECT cohort, label, sticker_annual, net_price_annual,

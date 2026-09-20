@@ -187,6 +187,17 @@ const SORT_PREFERENCE_STEP: IntakeStep = {
   placeholder: "",
 }
 
+const REPORT_DEPTH_STEP: IntakeStep = {
+  key: 'report_depth',
+  question: "How deep should I go?",
+  subtitle: "I can give you a quick snapshot or a full financial breakdown.",
+  options: [
+    "Just the numbers: salaries and career paths",
+    "The whole picture: loans, total cost, break-even, and payoff timeline",
+  ],
+  placeholder: "",
+}
+
 const TRADE_INTEREST_STEP: IntakeStep = {
   key: 'trade_interest',
   question: "Are you considering alternatives to college?",
@@ -221,6 +232,7 @@ function getNextStep(answers: Record<string, string>): IntakeStep | null {
     if (wantsStateSearch && !keys.includes('sort_preference')) return SORT_PREFERENCE_STEP
     if (!keys.includes('interests')) return INTERESTS_STEP
     if (!keys.includes('trade_interest')) return TRADE_INTEREST_STEP
+    if (!keys.includes('report_depth')) return REPORT_DEPTH_STEP
     if (!keys.includes('priority')) return PRIORITY_STEP
     return null
   }
@@ -230,6 +242,7 @@ function getNextStep(answers: Record<string, string>): IntakeStep | null {
     if (!keys.includes('change_reason')) return CHANGE_REASON_STEP
     const isDroppingOut = (answers.change_reason ?? '').toLowerCase().includes('dropping out')
     if (!isDroppingOut && !keys.includes('interests')) return INTERESTS_STEP
+    if (!keys.includes('report_depth')) return REPORT_DEPTH_STEP
     if (!keys.includes('priority')) return PRIORITY_STEP
     return null
   }
@@ -254,7 +267,7 @@ function estimateTotalSteps(answers: Record<string, string>): number {
   const segment = answers.segment?.toLowerCase() ?? ''
   if (segment.includes('in college')) {
     const isDroppingOut = (answers.change_reason ?? '').toLowerCase().includes('dropping out')
-    return isDroppingOut ? 4 : 5
+    return isDroppingOut ? 5 : 6
   }
   if (segment.includes('not in school')) {
     const hasDegree = answers.has_degree?.toLowerCase().startsWith('yes')
@@ -265,9 +278,9 @@ function estimateTotalSteps(answers: Record<string, string>): number {
 
   if (segment.includes('considering whether')) {
     const approach = answers.school_approach?.toLowerCase() ?? ''
-    if (approach.includes('general')) return 5
-    if (approach.includes('specific state')) return 10
-    return 6
+    if (approach.includes('general')) return 6
+    if (approach.includes('specific state')) return 11
+    return 7
   }
   return 5
 }
@@ -747,6 +760,7 @@ function buildPrompt(answers: Record<string, string>): string {
   if (answers.budget) lines.push(`- Budget: ${answers.budget}`)
   if (answers.sort_preference) lines.push(`- Rank schools by: ${answers.sort_preference}`)
   if (answers.trade_interest) lines.push(`- College alternatives: ${answers.trade_interest}`)
+  if (answers.report_depth) lines.push(`- Report depth: ${answers.report_depth}`)
   if (answers.interests) lines.push(`- Fields that interest me: ${answers.interests}`)
   if (answers.priority) lines.push(`- What matters most: ${answers.priority}`)
   if (answers.career_priority) lines.push(`- Career priority: ${answers.career_priority}`)
