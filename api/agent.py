@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 client = anthropic.AsyncAnthropic()
 MODEL = "claude-haiku-4-5-20251001"
 REPORT_MODEL = "claude-haiku-4-5-20251001"
-REPORT_MAX_TOKENS = 8192
+REPORT_MAX_TOKENS = 16384
 
 # Cap agent loop so a misbehaving model can't spin forever.
 # 8 = enough for realistic multi-tool trajectories, small enough that
