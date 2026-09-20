@@ -7,8 +7,6 @@ import {
   Home,
   Compass,
   Bot,
-  GraduationCap,
-  Briefcase,
   HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -17,10 +15,8 @@ import { cn } from '@/lib/utils'
 
 const links = [
   { href: '/', label: 'Home', icon: Home },
-  { href: '/explore', label: 'Explore', icon: Compass },
   { href: '/chat', label: 'Counselor Agent', icon: Bot },
-  { href: '/majors', label: 'Compare Majors', icon: GraduationCap },
-  { href: '/occupations', label: 'Compare Occupations', icon: Briefcase },
+  { href: '/explore', label: 'Explore', icon: Compass },
   { href: '/faq', label: 'FAQ', icon: HelpCircle },
 ]
 

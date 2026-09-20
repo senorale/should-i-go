@@ -136,6 +136,12 @@ export default async function Home() {
               title="Compare schools"
               body="Pick a school on the U.S. Dept. of Education College Scorecard: graduation rates, costs, and earnings."
             />
+            <ToolCard
+              href="/chat"
+              cta="Start"
+              title="Counselor Agent"
+              body="Get personalized advice from an AI agent with access to real salary, tuition, and career data."
+            />
           </div>
         </section>
 
